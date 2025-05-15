@@ -4,6 +4,8 @@ using Piranha.AttributeBuilder;
 using Piranha.AspNetCore.Identity.SQLite;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
+using Editorial.Workflows.Data;
+using EditorialCMS.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,9 @@ builder.AddPiranha(options =>
      */
 });
 
+builder.Services.AddDbContext<WorkflowDbContext>(options =>
+    options.UseSqlite("Data Source=workflow.db")); // Ou junta à base existente
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -72,5 +77,7 @@ app.UsePiranha(options =>
     options.UseTinyMCE();
     options.UseIdentity();
 });
+
+WorkflowSeeder.Seed(app);
 
 app.Run();
