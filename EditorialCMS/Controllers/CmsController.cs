@@ -3,6 +3,7 @@ using Piranha;
 using Piranha.AspNetCore.Services;
 using Piranha.Models;
 using EditorialCMS.Models;
+using EditorialCMS.Services;
 
 namespace EditorialCMS.Controllers;
 
@@ -11,15 +12,17 @@ public class CmsController : Controller
 {
     private readonly IApi _api;
     private readonly IModelLoader _loader;
+    private readonly IWorkflowService _workflowService;
 
     /// <summary>
     /// Default constructor.
     /// </summary>
     /// <param name="api">The current api</param>
-    public CmsController(IApi api, IModelLoader loader)
+    public CmsController(IApi api, IModelLoader loader, IWorkflowService workflowService)
     {
         _api = api;
         _loader = loader;
+        _workflowService = workflowService;
     }
 
     /// <summary>
@@ -124,5 +127,24 @@ public class CmsController : Controller
         {
             return Unauthorized();
         }
+    }
+
+    [HttpPost]
+    [Route("page/create")]
+    public async Task<IActionResult> CreatePageWithWorkflow(string title, Guid workflowId)
+    {
+        var page = await StandardPage.CreateAsync(_api);
+
+        page.Title = title;
+        page.SiteId = (await _api.Sites.GetDefaultAsync()).Id;
+        page.NavigationTitle = title;
+        page.Slug = Utils.GenerateSlug(title);
+
+        await _api.Pages.SaveAsync(page);
+
+        // Associar ao workflow
+        await _workflowService.BindContentToWorkflowAsync("Page", page.Id.ToString(), workflowId);
+
+        return RedirectToAction("Page", new { id = page.Id });
     }
 }

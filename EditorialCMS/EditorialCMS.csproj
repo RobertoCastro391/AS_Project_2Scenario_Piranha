@@ -10,6 +10,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="Piranha" Version="12.0.0" />
     <PackageReference Include="Piranha.AspNetCore" Version="12.0.0" />
     <PackageReference Include="Piranha.AspNetCore.Identity.SQLite" Version="12.0.0" />
@@ -27,7 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Services\Impl\" />
+    <Folder Include="Areas\Manager\Data\" />
+    <Folder Include="Areas\Manager\Models\" />
   </ItemGroup>
 
 </Project>

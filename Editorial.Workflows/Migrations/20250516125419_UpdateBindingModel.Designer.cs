@@ -3,6 +3,7 @@ using System;
 using Editorial.Workflows.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Editorial.Workflows.Migrations
 {
     [DbContext(typeof(WorkflowDbContext))]
-    partial class WorkflowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250516125419_UpdateBindingModel")]
+    partial class UpdateBindingModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.5");

@@ -6,6 +6,8 @@ using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
 using Editorial.Workflows.Data;
 using EditorialCMS.Seed;
+using Editorial.Workflows.Services;
+using EditorialCMS.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,7 +54,23 @@ builder.AddPiranha(options =>
 builder.Services.AddDbContext<WorkflowDbContext>(options =>
     options.UseSqlite("Data Source=workflow.db")); // Ou junta à base existente
 
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+
 var app = builder.Build();
+
+app.UseRouting();
+
+app.UseAuthorization();
+
+// Esta linha é obrigatória para o manager e suas áreas funcionarem
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+// Rota padrão (opcional)
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 if (app.Environment.IsDevelopment())
 {

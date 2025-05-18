@@ -1,6 +1,6 @@
 ﻿using Editorial.Workflows.Models;
 
-namespace EditorialCMS.Models
+namespace Editorial.Workflows.Models
 {
     public class ContentWorkflowBinding
     {

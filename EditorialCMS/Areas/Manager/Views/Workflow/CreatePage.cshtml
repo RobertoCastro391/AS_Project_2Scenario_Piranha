@@ -1,0 +1,28 @@
+﻿@{
+    ViewData["Title"] = "Criar Página com Workflow";
+    var workflows = ViewBag.Workflows as List<Editorial.Workflows.Models.Workflow>;
+}
+
+<h2>Criar Página com Workflow</h2>
+
+<form method="post" asp-area="Manager" asp-controller="Workflow" asp-action="CreatePage">
+    <div class="form-group">
+        <label>Título</label>
+        <input type="text" name="title" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label>Workflow</label>
+        <select name="workflowId" class="form-control" required>
+            @foreach (var wf in workflows)
+            {
+                <option value="@wf.Id">@wf.Name</option>
+            }
+        </select>
+    </div>
+    <button class="btn btn-primary mt-3">Criar Página</button>
+</form>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success mt-3">@TempData["Success"]</div>
+}
