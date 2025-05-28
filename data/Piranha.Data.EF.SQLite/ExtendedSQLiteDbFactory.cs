@@ -8,7 +8,7 @@ namespace Piranha.Data.EF.SQLite
         public ExtendedSQLiteDb CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<ExtendedSQLiteDb>();
-            optionsBuilder.UseSqlite("Filename=editorial.db"); // apenas para gerar migrations
+            optionsBuilder.UseSqlite("Filename=piranha.db"); // apenas para gerar migrations
 
             return new ExtendedSQLiteDb(optionsBuilder.Options);
         }

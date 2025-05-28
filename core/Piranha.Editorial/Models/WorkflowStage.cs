@@ -35,5 +35,7 @@ namespace Piranha.Editorial.Models
         /// Instruções visuais ou comentários para o utilizador nesta etapa.
         /// </summary>
         public string? Instructions { get; set; }
+
+        public string Name { get; set; } // ✅ NOVO
     }
 }

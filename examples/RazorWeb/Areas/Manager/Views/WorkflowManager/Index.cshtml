@@ -1,0 +1,26 @@
+﻿@model List<Piranha.Editorial.ViewModels.WorkflowListItemViewModel>
+
+@{
+    ViewData["Title"] = "Gestão de Workflows";
+}
+
+
+<h1 class="mb-4">Gestão de Workflows</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Etapas</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var workflow in Model)
+        {
+            <tr>
+                <td>@workflow.Name</td>
+                <td>@workflow.StageCount</td>
+            </tr>
+        }
+    </tbody>
+</table>
