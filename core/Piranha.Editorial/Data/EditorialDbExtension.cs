@@ -7,7 +7,7 @@ namespace Piranha.Editorial.Data
     {
         public static void Configure(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<PostEditorialStatus>();
+            modelBuilder.Entity<PageEditorialStatus>();
             modelBuilder.Entity<Workflow>();
             modelBuilder.Entity<WorkflowStage>();
             modelBuilder.Entity<WorkflowTransition>();

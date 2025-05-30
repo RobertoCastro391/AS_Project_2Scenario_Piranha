@@ -5,11 +5,15 @@ using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
 using Piranha.Manager;
+using Piranha.Editorial.Services;
+using RazorWeb.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<RazorWeb.Services.Editorial.IWorkflowRepository, RazorWeb.Services.Editorial.WorkflowRepository>();
+builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
+
 
 
 builder.AddPiranha(options =>

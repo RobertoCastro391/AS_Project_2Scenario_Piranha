@@ -7,7 +7,7 @@ namespace Piranha.Data.EF.SQLite
     {
         public ExtendedSQLiteDb(DbContextOptions<ExtendedSQLiteDb> options) : base(options) { }
 
-        public DbSet<PostEditorialStatus> PostEditorialStatuses { get; set; }
+        public DbSet<PageEditorialStatus> PageEditorialStatuses { get; set; }
         public DbSet<Workflow> Workflows { get; set; }
         public DbSet<WorkflowStage> WorkflowStages { get; set; }
         public DbSet<WorkflowTransition> WorkflowTransitions { get; set; }

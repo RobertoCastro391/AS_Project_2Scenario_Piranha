@@ -12,7 +12,8 @@ namespace Piranha.Editorial.Enums
         EditorialReview,
         LegalReview,
         Approved,
-        Published,
-        Rejected
+        Published, 
+        RejectedByEditor,
+        RejectedByLegal
     }
 }

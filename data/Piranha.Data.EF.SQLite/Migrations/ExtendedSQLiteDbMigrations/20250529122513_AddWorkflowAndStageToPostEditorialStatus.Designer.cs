@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Piranha.Data.EF.SQLite;
 
@@ -10,9 +11,11 @@ using Piranha.Data.EF.SQLite;
 namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
 {
     [DbContext(typeof(ExtendedSQLiteDb))]
-    partial class ExtendedSQLiteDbModelSnapshot : ModelSnapshot
+    [Migration("20250529122513_AddWorkflowAndStageToPostEditorialStatus")]
+    partial class AddWorkflowAndStageToPostEditorialStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.5");
@@ -51,7 +54,7 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                     b.ToTable("ContentStateHistories");
                 });
 
-            modelBuilder.Entity("Piranha.Editorial.Models.PageEditorialStatus", b =>
+            modelBuilder.Entity("Piranha.Editorial.Models.PostEditorialStatus", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -60,7 +63,7 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                     b.Property<Guid>("CurrentStageId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("PageId")
+                    b.Property<Guid>("PostId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
@@ -74,7 +77,7 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PageEditorialStatus");
+                    b.ToTable("PostEditorialStatuses");
                 });
 
             modelBuilder.Entity("Piranha.Editorial.Models.Workflow", b =>

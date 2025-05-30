@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Piranha.Data.EF.SQLite;
 
@@ -10,9 +11,11 @@ using Piranha.Data.EF.SQLite;
 namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
 {
     [DbContext(typeof(ExtendedSQLiteDb))]
-    partial class ExtendedSQLiteDbModelSnapshot : ModelSnapshot
+    [Migration("20250529130651_RenameToPageEditorialStatus")]
+    partial class RenameToPageEditorialStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.5");
