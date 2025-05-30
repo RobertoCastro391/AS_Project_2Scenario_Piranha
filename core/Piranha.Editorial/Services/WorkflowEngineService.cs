@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Piranha.Editorial.Enums;
-using Piranha.Editorial.Models;
+using Piranha.Editorial.Abstractions.Enums;
+using Piranha.Editorial.Abstractions.Models;
 
 namespace Piranha.Editorial.Services
 {

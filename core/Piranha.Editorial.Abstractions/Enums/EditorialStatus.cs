@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Piranha.Editorial.Enums
+namespace Piranha.Editorial.Abstractions.Enums
 {
     public enum EditorialStatus
     {

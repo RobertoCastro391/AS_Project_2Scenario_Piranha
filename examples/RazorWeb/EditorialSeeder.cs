@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Piranha.Data.EF.SQLite;
-using Piranha.Editorial.Models;
-using Piranha.Editorial.Enums;
+using Piranha.Editorial.Abstractions.Models;
+using Piranha.Editorial.Abstractions.Enums;
 
 namespace RazorWeb;
 

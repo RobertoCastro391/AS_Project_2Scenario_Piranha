@@ -75,6 +75,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Piranha.AspNetCore.Hosting"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Piranha.Editorial", "core\Piranha.Editorial\Piranha.Editorial.csproj", "{906A34D2-DB33-42DF-976E-65AE7264F93C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Piranha.Editorial.Abstractions", "core\Piranha.Editorial.Abstractions\Piranha.Editorial.Abstractions.csproj", "{0093D476-4D81-4CDC-98AA-0AA57134B90F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -189,6 +191,10 @@ Global
 		{906A34D2-DB33-42DF-976E-65AE7264F93C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{906A34D2-DB33-42DF-976E-65AE7264F93C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{906A34D2-DB33-42DF-976E-65AE7264F93C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0093D476-4D81-4CDC-98AA-0AA57134B90F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0093D476-4D81-4CDC-98AA-0AA57134B90F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0093D476-4D81-4CDC-98AA-0AA57134B90F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0093D476-4D81-4CDC-98AA-0AA57134B90F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -221,6 +227,7 @@ Global
 		{A88D6D8D-725E-494F-91CD-440D87BFF21B} = {42A64587-89B5-48F2-84D4-85B97F7847F1}
 		{8AFA0D7F-BDD9-41E0-BC69-B2B762516F33} = {42A64587-89B5-48F2-84D4-85B97F7847F1}
 		{906A34D2-DB33-42DF-976E-65AE7264F93C} = {42A64587-89B5-48F2-84D4-85B97F7847F1}
+		{0093D476-4D81-4CDC-98AA-0AA57134B90F} = {42A64587-89B5-48F2-84D4-85B97F7847F1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CF88AA05-D127-4707-8214-A230F0DA569B}

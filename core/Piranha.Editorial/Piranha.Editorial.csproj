@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Piranha\Piranha.csproj" />
+    <ProjectReference Include="..\Piranha.Editorial.Abstractions\Piranha.Editorial.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

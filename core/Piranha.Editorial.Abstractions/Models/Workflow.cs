@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Piranha.Editorial.Models
+namespace Piranha.Editorial.Abstractions.Models
 {
     public class Workflow
     {

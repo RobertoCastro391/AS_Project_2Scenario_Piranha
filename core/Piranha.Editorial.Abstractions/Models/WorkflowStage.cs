@@ -1,7 +1,7 @@
 ﻿using System;
-using Piranha.Editorial.Enums;
+using Piranha.Editorial.Abstractions.Enums;
 
-namespace Piranha.Editorial.Models
+namespace Piranha.Editorial.Abstractions.Models
 {
     public class WorkflowStage
     {

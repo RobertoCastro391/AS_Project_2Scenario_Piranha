@@ -33,10 +33,16 @@ public class PageApiController : Controller
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
 
+
     /// <summary>
     /// Default constructor.
     /// </summary>
-    public PageApiController(PageService service, IApi api, ManagerLocalizer localizer, IHubContext<Hubs.PreviewHub> hub, IAuthorizationService auth)
+    public PageApiController(
+    PageService service,
+    IApi api,
+    ManagerLocalizer localizer,
+    IHubContext<Hubs.PreviewHub> hub,
+    IAuthorizationService auth) // novo
     {
         _service = service;
         _api = api;
@@ -355,6 +361,7 @@ public class PageApiController : Controller
         try
         {
             await _service.Save(model, draft);
+
         }
         catch (ValidationException e)
         {

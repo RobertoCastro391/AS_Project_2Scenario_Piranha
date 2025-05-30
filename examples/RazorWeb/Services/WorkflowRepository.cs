@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Piranha.Editorial.Models;
+using Piranha.Editorial.Abstractions.Models;
 using Piranha.Editorial.ViewModels;
 using Piranha.Data.EF.SQLite;
 
