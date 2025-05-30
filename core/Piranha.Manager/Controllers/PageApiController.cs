@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
+using Piranha.Editorial.Services;
+
 
 namespace Piranha.Manager.Controllers;
 
@@ -32,6 +34,8 @@ public class PageApiController : Controller
     private readonly ManagerLocalizer _localizer;
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
+    private readonly IEditorialWorkflowService _editorialWorkflowService;
+
 
 
     /// <summary>
@@ -42,14 +46,17 @@ public class PageApiController : Controller
     IApi api,
     ManagerLocalizer localizer,
     IHubContext<Hubs.PreviewHub> hub,
-    IAuthorizationService auth) // novo
+    IAuthorizationService auth,
+    IEditorialWorkflowService editorialWorkflowService)
     {
         _service = service;
         _api = api;
         _localizer = localizer;
         _hub = hub;
         _auth = auth;
+        _editorialWorkflowService = editorialWorkflowService;
     }
+
 
     /// <summary>
     /// Gets the list model.
@@ -361,6 +368,8 @@ public class PageApiController : Controller
         try
         {
             await _service.Save(model, draft);
+            await _editorialWorkflowService.EnsurePageStatusAsync(model.Id);
+
 
         }
         catch (ValidationException e)
