@@ -51,6 +51,7 @@ piranha.pageedit = new Vue({
             media: null
         },
         selectedPermissions: [],
+        workflowStageName: null,
         isCopy: false,
         isScheduled: false,
         saving: false,
@@ -149,6 +150,7 @@ piranha.pageedit = new Vue({
             this.permissions = model.permissions;
             this.primaryImage = model.primaryImage;
             this.selectedPermissions = model.selectedPermissions;
+            this.workflowStageName = model.workflowStageName;
 
             if (!this.useBlocks) {
                 // First choice, select the first custom editor
@@ -284,6 +286,7 @@ piranha.pageedit = new Vue({
                 regions: JSON.parse(JSON.stringify(self.regions)),
                 selectedRoute: self.selectedRoute,
                 selectedPermissions: self.selectedPermissions,
+                workflowStageName: self.workflowStageName,
                 primaryImage: {
                     id: self.primaryImage.id
                 },

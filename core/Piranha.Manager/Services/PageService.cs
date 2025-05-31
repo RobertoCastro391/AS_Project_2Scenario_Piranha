@@ -18,6 +18,7 @@ using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Models.Content;
 using Piranha.Services;
+using Piranha.Editorial.Repositories;
 
 namespace Piranha.Manager.Services;
 

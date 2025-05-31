@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.SignalR;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
 using Piranha.Editorial.Services;
+using Piranha.Editorial.Repositories;
 
 
 namespace Piranha.Manager.Controllers;
@@ -35,8 +36,7 @@ public class PageApiController : Controller
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
     private readonly IEditorialWorkflowService _editorialWorkflowService;
-
-
+    private readonly IWorkflowRepository _workflowRepository;
 
     /// <summary>
     /// Default constructor.
@@ -47,7 +47,8 @@ public class PageApiController : Controller
     ManagerLocalizer localizer,
     IHubContext<Hubs.PreviewHub> hub,
     IAuthorizationService auth,
-    IEditorialWorkflowService editorialWorkflowService)
+    IEditorialWorkflowService editorialWorkflowService,
+    IWorkflowRepository workflowRepository)
     {
         _service = service;
         _api = api;
@@ -55,6 +56,7 @@ public class PageApiController : Controller
         _hub = hub;
         _auth = auth;
         _editorialWorkflowService = editorialWorkflowService;
+        _workflowRepository = workflowRepository;
     }
 
 
@@ -112,7 +114,12 @@ public class PageApiController : Controller
     [Authorize(Policy = Permission.PagesEdit)]
     public async Task<PageEditModel> Get(Guid id)
     {
-        return await _service.GetById(id);
+        var model = await _service.GetById(id);
+
+        var stage = await _workflowRepository.GetStageForPageAsync(id);
+        model.WorkflowStageName = stage?.Name ?? "—";
+
+        return model;
     }
 
     /// <summary>

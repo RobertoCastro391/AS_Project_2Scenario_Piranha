@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Piranha.Editorial.ViewModels;
+using Piranha.Editorial.Abstractions.Models;
 
 namespace Piranha.Editorial.Repositories
 {
@@ -8,5 +9,6 @@ namespace Piranha.Editorial.Repositories
     {
         Task<List<WorkflowListItemViewModel>> GetAllAsync();
         Task<List<PageWorkflowStatusViewModel>> GetPageWorkflowStatusesAsync();
+        Task<WorkflowStage?> GetStageForPageAsync(Guid pageId);
     }
 }

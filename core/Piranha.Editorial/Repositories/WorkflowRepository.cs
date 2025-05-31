@@ -66,5 +66,18 @@ namespace Piranha.Editorial.Repositories
 
             return list;
         }
+
+        public async Task<WorkflowStage?> GetStageForPageAsync(Guid pageId)
+        {
+            var status = await _db.PageEditorialStatuses
+                .Where(p => p.PageId == pageId)
+                .FirstOrDefaultAsync();
+
+            if (status == null)
+                return null;
+
+            return await _db.WorkflowStages
+                .FirstOrDefaultAsync(s => s.Id == status.CurrentStageId);
+        }
     }
 }
