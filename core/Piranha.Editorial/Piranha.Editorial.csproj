@@ -7,10 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Interfaces\" />
-    <Folder Include="DTOs\" />
+    <Compile Remove="Constants\**" />
+    <Compile Remove="DTOs\**" />
+    <Compile Remove="Interfaces\**" />
+    <EmbeddedResource Remove="Constants\**" />
+    <EmbeddedResource Remove="DTOs\**" />
+    <EmbeddedResource Remove="Interfaces\**" />
+    <None Remove="Constants\**" />
+    <None Remove="DTOs\**" />
+    <None Remove="Interfaces\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Extensions\" />
-    <Folder Include="Constants\" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
