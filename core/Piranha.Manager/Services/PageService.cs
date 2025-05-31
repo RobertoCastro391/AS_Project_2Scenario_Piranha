@@ -18,6 +18,8 @@ using Piranha.Models;
 using Piranha.Manager.Models;
 using Piranha.Manager.Models.Content;
 using Piranha.Services;
+using Piranha.Editorial.Services;
+
 
 namespace Piranha.Manager.Services;
 
@@ -26,6 +28,7 @@ public class PageService
     private readonly IApi _api;
     private readonly IContentFactory _factory;
     private readonly ManagerLocalizer _localizer;
+    private readonly IEditorialWorkflowService _editorialWorkflowService;
 
     /// <summary>
     /// Default constructor.
@@ -33,11 +36,12 @@ public class PageService
     /// <param name="api">The current api</param>
     /// <param name="factory">The content factory</param>
     /// <param name="localizer">The manager localizer</param>
-    public PageService(IApi api, IContentFactory factory, ManagerLocalizer localizer)
+    public PageService(IApi api, IContentFactory factory, ManagerLocalizer localizer, IEditorialWorkflowService editorialWorkflowService)
     {
         _api = api;
         _factory = factory;
         _localizer = localizer;
+        _editorialWorkflowService = editorialWorkflowService;
     }
 
     /// <summary>
@@ -302,6 +306,15 @@ public class PageService
 
             model.PendingCommentCount = (await _api.Pages.GetAllPendingCommentsAsync(id))
                 .Count();
+            var editorial = await _editorialWorkflowService.GetStatusForPageAsync(id);
+
+            if (editorial != null)
+            {
+                model.EditorialStatus = editorial.Status;
+                model.EditorialStageId = editorial.CurrentStageId;
+                model.EditorialStageName = editorial.StageName;
+            }
+
 
             return model;
         }

@@ -198,4 +198,9 @@ public class PageEditModel : Content.ContentEditModel
     /// default value is false.
     /// </summary>
     public bool UseHtmlExcerpt { get; set; }
+
+    //O que é novo:
+    public string EditorialStatus { get; set; }
+    public Guid? EditorialStageId { get; set; }
+    public string EditorialStageName { get; set; }
 }

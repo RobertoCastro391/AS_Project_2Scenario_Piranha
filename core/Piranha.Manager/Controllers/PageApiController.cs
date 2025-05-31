@@ -112,7 +112,20 @@ public class PageApiController : Controller
     [Authorize(Policy = Permission.PagesEdit)]
     public async Task<PageEditModel> Get(Guid id)
     {
-        return await _service.GetById(id);
+        // 1. Buscar modelo da página
+        var model = await _service.GetById(id);
+
+        // 2. Buscar estado editorial (se existir)
+        var editorial = await _editorialWorkflowService.GetStatusForPageAsync(id);
+
+        if (editorial != null)
+        {
+            model.EditorialStatus = editorial.Status;
+            model.EditorialStageId = editorial.CurrentStageId;
+            model.EditorialStageName = editorial.StageName;
+        }
+
+        return model;
     }
 
     /// <summary>
@@ -393,4 +406,20 @@ public class PageApiController : Controller
 
         return ret;
     }
+
+    [HttpPost]
+    [Route("{id:Guid}/submit")]
+    [Authorize(Policy = Permission.PagesPublish)]
+    public async Task<IActionResult> Submit(Guid id)
+    {
+        var success = await _editorialWorkflowService.SubmitToEditorialReviewAsync(id);
+
+        if (!success)
+            return BadRequest(new { error = "Apenas páginas em rascunho podem ser submetidas ou houve erro na transição." });
+
+        return Ok(new { status = "EditorialReview" });
+    }
+
+
+
 }
