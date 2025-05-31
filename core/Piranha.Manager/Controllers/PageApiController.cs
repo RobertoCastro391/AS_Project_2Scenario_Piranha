@@ -1,4 +1,4 @@
-/*
+ï»¿/*
  * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
@@ -16,6 +16,7 @@ using Piranha.Manager.Models;
 using Piranha.Manager.Services;
 using Piranha.Editorial.Services;
 using Piranha.Editorial.Abstractions.Enums;
+using Piranha.Editorial.Repositories;
 
 
 
@@ -37,8 +38,7 @@ public class PageApiController : Controller
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
     private readonly IEditorialWorkflowService _editorialWorkflowService;
-
-
+    private readonly IWorkflowRepository _workflowRepository;
 
     /// <summary>
     /// Default constructor.
@@ -49,7 +49,8 @@ public class PageApiController : Controller
     ManagerLocalizer localizer,
     IHubContext<Hubs.PreviewHub> hub,
     IAuthorizationService auth,
-    IEditorialWorkflowService editorialWorkflowService)
+    IEditorialWorkflowService editorialWorkflowService,
+    IWorkflowRepository workflowRepository)
     {
         _service = service;
         _api = api;
@@ -57,6 +58,7 @@ public class PageApiController : Controller
         _hub = hub;
         _auth = auth;
         _editorialWorkflowService = editorialWorkflowService;
+        _workflowRepository = workflowRepository;
     }
 
 
@@ -114,7 +116,7 @@ public class PageApiController : Controller
     [Authorize(Policy = Permission.PagesEdit)]
     public async Task<PageEditModel> Get(Guid id)
     {
-        // 1. Buscar modelo da página
+        // 1. Buscar modelo da pï¿½gina
         var model = await _service.GetById(id);
 
         // 2. Buscar estado editorial (se existir)
@@ -126,6 +128,8 @@ public class PageApiController : Controller
             model.EditorialStageId = editorial.CurrentStageId;
             model.EditorialStageName = editorial.StageName;
         }
+        var stage = await _workflowRepository.GetStageForPageAsync(id);
+        model.WorkflowStageName = stage?.Name ?? "â€”";
 
         return model;
     }
@@ -420,7 +424,7 @@ public class PageApiController : Controller
         var success = await _editorialWorkflowService.SubmitToEditorialReviewAsync(id);
 
         if (!success)
-            return BadRequest(new { error = "Apenas páginas em rascunho podem ser submetidas ou houve erro na transição." });
+            return BadRequest(new { error = "Apenas pï¿½ginas em rascunho podem ser submetidas ou houve erro na transiï¿½ï¿½o." });
 
         return Ok(new { status = "EditorialReview" });
     }
@@ -441,11 +445,11 @@ public class PageApiController : Controller
         var transition = transitions.FirstOrDefault(t => t.ToStatus == toStatus);
 
         if (transition == null)
-            return BadRequest(new { error = "Transição inválida para esta página." });
+            return BadRequest(new { error = "Transiï¿½ï¿½o invï¿½lida para esta pï¿½gina." });
 
         var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
         if (!success)
-            return BadRequest(new { error = "Falha ao aplicar a transição." });
+            return BadRequest(new { error = "Falha ao aplicar a transiï¿½ï¿½o." });
 
         return Ok(new { status = toStatus.ToString() });
     }

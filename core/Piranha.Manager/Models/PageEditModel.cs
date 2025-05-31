@@ -199,8 +199,10 @@ public class PageEditModel : Content.ContentEditModel
     /// </summary>
     public bool UseHtmlExcerpt { get; set; }
 
-    //O que é novo:
+    //O que ï¿½ novo:
     public string EditorialStatus { get; set; }
     public Guid? EditorialStageId { get; set; }
     public string EditorialStageName { get; set; }
+    public string WorkflowStageName { get; set; }
+
 }
