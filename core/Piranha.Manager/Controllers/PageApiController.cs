@@ -15,7 +15,9 @@ using Microsoft.AspNetCore.SignalR;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
 using Piranha.Editorial.Services;
+using Piranha.Editorial.Abstractions.Enums;
 using Piranha.Editorial.Repositories;
+
 
 
 namespace Piranha.Manager.Controllers;
@@ -114,8 +116,18 @@ public class PageApiController : Controller
     [Authorize(Policy = Permission.PagesEdit)]
     public async Task<PageEditModel> Get(Guid id)
     {
+        // 1. Buscar modelo da p�gina
         var model = await _service.GetById(id);
 
+        // 2. Buscar estado editorial (se existir)
+        var editorial = await _editorialWorkflowService.GetStatusForPageAsync(id);
+
+        if (editorial != null)
+        {
+            model.EditorialStatus = editorial.Status;
+            model.EditorialStageId = editorial.CurrentStageId;
+            model.EditorialStageName = editorial.StageName;
+        }
         var stage = await _workflowRepository.GetStageForPageAsync(id);
         model.WorkflowStageName = stage?.Name ?? "—";
 
@@ -271,6 +283,8 @@ public class PageApiController : Controller
 
         var ret = await Save(model, false);
         await _hub?.Clients.All.SendAsync("Update", model.Id);
+        await _editorialWorkflowService.ApplyTransitionAsync(model.Id, EditorialStatus.Draft);
+
 
         return ret;
     }
@@ -313,6 +327,7 @@ public class PageApiController : Controller
         try
         {
             await _service.Delete(id);
+            await _editorialWorkflowService.DeleteStatusForPageAsync(id);
         }
         catch (ValidationException e)
         {
@@ -400,4 +415,50 @@ public class PageApiController : Controller
 
         return ret;
     }
+
+    [HttpPost]
+    [Route("{id:Guid}/submit")]
+    [Authorize(Policy = Permission.PagesPublish)]
+    public async Task<IActionResult> Submit(Guid id)
+    {
+        var success = await _editorialWorkflowService.SubmitToEditorialReviewAsync(id);
+
+        if (!success)
+            return BadRequest(new { error = "Apenas p�ginas em rascunho podem ser submetidas ou houve erro na transi��o." });
+
+        return Ok(new { status = "EditorialReview" });
+    }
+
+    [HttpGet("available-transitions/{pageId}")]
+    public async Task<IActionResult> GetAvailableTransitions(Guid pageId)
+    {
+        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(pageId);
+        return Ok(transitions);
+    }
+
+    [HttpPost("transition/{id:Guid}")]
+    [Authorize(Policy = Permission.PagesPublish)]
+    public async Task<IActionResult> PerformTransition(Guid id, [FromBody] TransitionRequest request)
+    {
+        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(id);
+        var toStatus = (EditorialStatus)request.ToStatus;
+        var transition = transitions.FirstOrDefault(t => t.ToStatus == toStatus);
+
+        if (transition == null)
+            return BadRequest(new { error = "Transi��o inv�lida para esta p�gina." });
+
+        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
+        if (!success)
+            return BadRequest(new { error = "Falha ao aplicar a transi��o." });
+
+        return Ok(new { status = toStatus.ToString() });
+    }
+
+    public class TransitionRequest
+    {
+        public int ToStatus { get; set; }
+    }
+
+
+
 }
