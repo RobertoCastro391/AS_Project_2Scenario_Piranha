@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) .NET Foundation and Contributors
  *
  * This software may be modified and distributed under the terms
@@ -14,6 +14,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
+using Piranha.Editorial.Services;
+using Piranha.Editorial.Repositories;
+
 
 namespace Piranha.Manager.Controllers;
 
@@ -32,18 +35,30 @@ public class PageApiController : Controller
     private readonly ManagerLocalizer _localizer;
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
+    private readonly IEditorialWorkflowService _editorialWorkflowService;
+    private readonly IWorkflowRepository _workflowRepository;
 
     /// <summary>
     /// Default constructor.
     /// </summary>
-    public PageApiController(PageService service, IApi api, ManagerLocalizer localizer, IHubContext<Hubs.PreviewHub> hub, IAuthorizationService auth)
+    public PageApiController(
+    PageService service,
+    IApi api,
+    ManagerLocalizer localizer,
+    IHubContext<Hubs.PreviewHub> hub,
+    IAuthorizationService auth,
+    IEditorialWorkflowService editorialWorkflowService,
+    IWorkflowRepository workflowRepository)
     {
         _service = service;
         _api = api;
         _localizer = localizer;
         _hub = hub;
         _auth = auth;
+        _editorialWorkflowService = editorialWorkflowService;
+        _workflowRepository = workflowRepository;
     }
+
 
     /// <summary>
     /// Gets the list model.
@@ -99,7 +114,12 @@ public class PageApiController : Controller
     [Authorize(Policy = Permission.PagesEdit)]
     public async Task<PageEditModel> Get(Guid id)
     {
-        return await _service.GetById(id);
+        var model = await _service.GetById(id);
+
+        var stage = await _workflowRepository.GetStageForPageAsync(id);
+        model.WorkflowStageName = stage?.Name ?? "—";
+
+        return model;
     }
 
     /// <summary>
@@ -355,6 +375,9 @@ public class PageApiController : Controller
         try
         {
             await _service.Save(model, draft);
+            await _editorialWorkflowService.EnsurePageStatusAsync(model.Id);
+
+
         }
         catch (ValidationException e)
         {

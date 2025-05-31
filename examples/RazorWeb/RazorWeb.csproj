@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\core\Piranha.Editorial\Piranha.Editorial.csproj" />
     <ProjectReference Include="..\..\core\Piranha\Piranha.csproj" />
     <ProjectReference Include="..\..\core\Piranha.AspNetCore\Piranha.AspNetCore.csproj" />
     <ProjectReference Include="..\..\core\Piranha.AttributeBuilder\Piranha.AttributeBuilder.csproj" />
@@ -19,6 +20,18 @@
     <ProjectReference Include="..\..\data\Piranha.Data.EF.MySql\Piranha.Data.EF.MySql.csproj" />
     <ProjectReference Include="..\..\data\Piranha.Data.EF.PostgreSql\Piranha.Data.EF.PostgreSql.csproj" />
     <ProjectReference Include="..\..\identity\Piranha.AspNetCore.Identity.SQLite\Piranha.AspNetCore.Identity.SQLite.csproj" />
+    <ProjectReference Include="..\..\identity\Piranha.AspNetCore.Identity\Piranha.AspNetCore.Identity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

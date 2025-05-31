@@ -68,6 +68,17 @@
                 <li class="breadcrumb-item">@Localizer.Menu["Content"]</li>
                 <li class="breadcrumb-item"><a href="~/manager/pages">@Localizer.Menu["Pages"]</a></li>
                 <li class="breadcrumb-item active" aria-current="page">@Localizer.General["Edit"]</li>
+                <li class="badge-item" v-if="workflowStageName">
+                    <span class="badge"
+                          :class="{
+              'badge-primary': workflowStageName === 'Rascunho',
+              'badge-info': workflowStageName === 'Revisão Editorial' || workflowStageName === 'Revisão Jurídica',
+              'badge-danger': workflowStageName === 'Rejeitado pelo Editor' || workflowStageName === 'Rejeitado pelo Jurista',
+              'badge-success': workflowStageName === 'Aprovação Final'
+          }">
+                        <i class="fas fa-project-diagram"></i> {{ workflowStageName }}
+                    </span>
+                </li>
                 <li v-if="isCopy" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-warning">@Localizer.General["Copy"]</span></li>
                 <li v-if="isScheduled" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-info"><i class="fas fa-calendar-alt"></i> @Localizer.General["Scheduled"]</span></li>
                 <li v-if="state === 'unpublished'" class="badge-item app" :class="{ ready: !loading }"><span class="badge badge-info"><i class="fas fa-unlink"></i> @Localizer.General["Unpublished"]</span></li>

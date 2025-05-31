@@ -23,6 +23,8 @@ using Piranha.Manager.LocalAuth;
 using IDb = Piranha.AspNetCore.Identity.IDb;
 using Module = Piranha.AspNetCore.Identity.Module;
 
+
+
 public static class IdentityModuleExtensions
 {
     /// <summary>
@@ -37,7 +39,7 @@ public static class IdentityModuleExtensions
         Action<DbContextOptionsBuilder> dbOptions,
         Action<IdentityOptions> identityOptions = null,
         Action<CookieAuthenticationOptions> cookieOptions = null)
-        where T : Db<T>
+        where T : Piranha.AspNetCore.Identity.Db<T>
     {
         services
             .AddRazorPages()
@@ -140,7 +142,7 @@ public static class IdentityModuleExtensions
         Action<DbContextOptionsBuilder> dbOptions,
         Action<IdentityOptions> identityOptions = null,
         Action<CookieAuthenticationOptions> cookieOptions = null)
-        where T : Db<T>
+        where T : Piranha.AspNetCore.Identity.Db<T>
         where TSeed : class, IIdentitySeed
     {
         services = AddPiranhaIdentity<T>(services, dbOptions, identityOptions, cookieOptions);
@@ -161,7 +163,7 @@ public static class IdentityModuleExtensions
         Action<DbContextOptionsBuilder> dbOptions,
         Action<IdentityOptions> identityOptions = null,
         Action<CookieAuthenticationOptions> cookieOptions = null)
-        where T : Db<T>
+        where T : Piranha.AspNetCore.Identity.Db<T>
     {
         return AddPiranhaIdentityWithSeed<T, DefaultIdentitySeed>(services, dbOptions, identityOptions, cookieOptions);
     }

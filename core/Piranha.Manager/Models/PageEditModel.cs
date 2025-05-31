@@ -198,4 +198,7 @@ public class PageEditModel : Content.ContentEditModel
     /// default value is false.
     /// </summary>
     public bool UseHtmlExcerpt { get; set; }
+
+    public string WorkflowStageName { get; set; }
+
 }
