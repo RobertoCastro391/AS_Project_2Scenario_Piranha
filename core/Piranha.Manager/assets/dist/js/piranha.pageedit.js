@@ -39,6 +39,7 @@ piranha.pageedit = new Vue({
         pendingCommentCount: 0,
         state: "new",
         editorialStatus: null,
+        availableTransitions: [],
         blocks: [],
         regions: [],
         editors: [],
@@ -137,6 +138,8 @@ piranha.pageedit = new Vue({
             this.pendingCommentCount = model.pendingCommentCount;
             this.state = model.state;
             this.editorialStatus = model.editorialStatus;
+            this.availableTransitions = [];
+            this.loadTransitions();
             this.blocks = model.blocks;
             this.regions = model.regions;
             this.editors = model.editors;
@@ -310,6 +313,7 @@ piranha.pageedit = new Vue({
 
                     if (oldState === 'new' && result.state !== 'new') {
                         window.history.replaceState({ state: "created" }, "Edit page", piranha.baseUrl + "manager/page/edit/" + result.id);
+                        setTimeout(() => window.location.reload(), 1);
                     }
                     piranha.notifications.push(result.status);
 
@@ -483,8 +487,95 @@ piranha.pageedit = new Vue({
                 .catch(function (error) {
                     console.error("Erro ao submeter para revisão:", error);
                 });
-        }
+        },
+        loadTransitions: function () {
+            var self = this;
 
+            fetch(piranha.baseUrl + "manager/api/page/available-transitions/" + self.id)
+                .then(function (response) { return response.json(); })
+                .then(function (result) {
+                    self.availableTransitions = result;
+                })
+                .catch(function (error) {
+                    console.error("Erro ao carregar transições disponíveis:", error);
+                });
+        },
+        applyTransition: function (transition) {
+            var self = this;
+
+            fetch(piranha.baseUrl + "manager/api/page/transition/" + self.id, {
+                method: "post",
+                headers: {
+                    ...piranha.utils.antiForgeryHeaders(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ toStatus: transition.toStatus })
+            })
+                .then(function (response) {
+                    if (!response.ok) throw new Error("Erro ao aplicar transição");
+                    return response.json();
+                })
+                .then(function (result) {
+                    self.editorialStatus = result.status;
+                    self.loadTransitions();
+
+                    piranha.notifications.push({
+                        type: "success",
+                        body: "Transição realizada com sucesso.",
+                        timeout: 300
+                    });
+
+                    if (transition.toStatus === 0 || transition.toStatus === 4) {
+                        setTimeout(() => window.location.reload(), 1);
+                    }
+
+                })
+                .catch(function (error) {
+                    console.error("Erro ao aplicar transição:", error);
+                    piranha.notifications.push({
+                        type: "danger",
+                        body: "Erro ao aplicar transição.",
+                        timeout: 4000
+                    });
+                });
+        },
+        getButtonClass: function (actionName) {
+            switch (actionName.toLowerCase()) {
+                case "submeter para revisão":
+                case "submeter":
+                    return "btn-warning";
+                case "aprovar":
+                    return "btn-success";
+                case "rejeitar":
+                    return "btn-danger";
+                case "publicar":
+                    return "btn-success";
+                case "voltar ao rascunho":
+                    return "btn-secondary";
+                default:
+                    return "btn-info";
+            }
+        },
+        getButtonIcon: function (actionName) {
+            switch (actionName.toLowerCase()) {
+                case "submeter para revisão":
+                case "submeter":
+                    return "fas fa-paper-plane";
+                case "aprovar":
+                    return "fas fa-check";
+                case "rejeitar":
+                    return "fas fa-times";
+                case "publicar":
+                    return "fas fa-bullhorn";
+                case "voltar ao rascunho":
+                    return "fas fa-pencil-alt";
+                default:
+                    return "fas fa-random";
+            }
+        },
+        performTransition: function (transition) {
+            this.applyTransition(transition);
+        }
     },
     created: function () {
     },

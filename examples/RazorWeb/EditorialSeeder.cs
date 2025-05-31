@@ -39,35 +39,27 @@ public static class EditorialSeeder
                     },
                     new WorkflowStage
                     {
-                        Name = "Rejeitado pelo Editor",
-                        Status = EditorialStatus.RejectedByEditor,
-                        Order = 2,
-                        RoleName = "Editor",
-                        Instructions = "Motivar a rejeição com observações claras."
-                    },
-                    new WorkflowStage
-                    {
                         Name = "Revisão Jurídica",
                         Status = EditorialStatus.LegalReview,
-                        Order = 3,
+                        Order = 2,
                         RoleName = "Jurista",
                         Instructions = "Confirma conformidade legal."
                     },
                     new WorkflowStage
                     {
-                        Name = "Rejeitado pelo Jurista",
-                        Status = EditorialStatus.RejectedByLegal,
-                        Order = 4,
-                        RoleName = "Jurista",
-                        Instructions = "Especificar as bases legais da rejeição."
+                        Name = "Aprovação Final",
+                        Status = EditorialStatus.Approved,
+                        Order = 3,
+                        RoleName = "Diretor",
+                        Instructions = "Aprova para publicação final."
                     },
                     new WorkflowStage
                     {
-                        Name = "Aprovação Final",
-                        Status = EditorialStatus.Approved,
-                        Order = 5,
+                        Name = "Publicado",
+                        Status = EditorialStatus.Published,
+                        Order = 4,
                         RoleName = "Diretor",
-                        Instructions = "Aprova para publicação final."
+                        Instructions = "Publicado"
                     }
                 }
             };
@@ -123,7 +115,7 @@ public static class EditorialSeeder
                     Id = Guid.NewGuid(),
                     WorkflowId = workflowId,
                     FromStatus = EditorialStatus.EditorialReview,
-                    ToStatus = EditorialStatus.RejectedByEditor,
+                    ToStatus = EditorialStatus.Draft,
                     ActionName = "Rejeitar",
                     RequiredRole = "Editor"
                 },
@@ -132,7 +124,7 @@ public static class EditorialSeeder
                     Id = Guid.NewGuid(),
                     WorkflowId = workflowId,
                     FromStatus = EditorialStatus.LegalReview,
-                    ToStatus = EditorialStatus.RejectedByLegal,
+                    ToStatus = EditorialStatus.Draft,
                     ActionName = "Rejeitar",
                     RequiredRole = "Jurista"
                 },
@@ -140,19 +132,19 @@ public static class EditorialSeeder
                 {
                     Id = Guid.NewGuid(),
                     WorkflowId = workflowId,
-                    FromStatus = EditorialStatus.RejectedByEditor,
+                    FromStatus = EditorialStatus.Approved,
                     ToStatus = EditorialStatus.Draft,
-                    ActionName = "Revisar e Reenviar",
-                    RequiredRole = "Autor"
+                    ActionName = "Rejeitar",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {
                     Id = Guid.NewGuid(),
                     WorkflowId = workflowId,
-                    FromStatus = EditorialStatus.RejectedByLegal,
+                    FromStatus = EditorialStatus.Published,
                     ToStatus = EditorialStatus.Draft,
-                    ActionName = "Revisar e Reenviar",
-                    RequiredRole = "Autor"
+                    ActionName = "Voltar a Rascunho",
+                    RequiredRole = "Diretor"
                 }
             };
 

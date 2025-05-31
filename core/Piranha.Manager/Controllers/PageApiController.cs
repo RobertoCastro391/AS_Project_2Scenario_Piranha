@@ -15,6 +15,8 @@ using Microsoft.AspNetCore.SignalR;
 using Piranha.Manager.Models;
 using Piranha.Manager.Services;
 using Piranha.Editorial.Services;
+using Piranha.Editorial.Abstractions.Enums;
+
 
 
 namespace Piranha.Manager.Controllers;
@@ -277,6 +279,8 @@ public class PageApiController : Controller
 
         var ret = await Save(model, false);
         await _hub?.Clients.All.SendAsync("Update", model.Id);
+        await _editorialWorkflowService.ApplyTransitionAsync(model.Id, EditorialStatus.Draft);
+
 
         return ret;
     }
@@ -319,6 +323,7 @@ public class PageApiController : Controller
         try
         {
             await _service.Delete(id);
+            await _editorialWorkflowService.DeleteStatusForPageAsync(id);
         }
         catch (ValidationException e)
         {
@@ -418,6 +423,36 @@ public class PageApiController : Controller
             return BadRequest(new { error = "Apenas páginas em rascunho podem ser submetidas ou houve erro na transição." });
 
         return Ok(new { status = "EditorialReview" });
+    }
+
+    [HttpGet("available-transitions/{pageId}")]
+    public async Task<IActionResult> GetAvailableTransitions(Guid pageId)
+    {
+        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(pageId);
+        return Ok(transitions);
+    }
+
+    [HttpPost("transition/{id:Guid}")]
+    [Authorize(Policy = Permission.PagesPublish)]
+    public async Task<IActionResult> PerformTransition(Guid id, [FromBody] TransitionRequest request)
+    {
+        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(id);
+        var toStatus = (EditorialStatus)request.ToStatus;
+        var transition = transitions.FirstOrDefault(t => t.ToStatus == toStatus);
+
+        if (transition == null)
+            return BadRequest(new { error = "Transição inválida para esta página." });
+
+        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
+        if (!success)
+            return BadRequest(new { error = "Falha ao aplicar a transição." });
+
+        return Ok(new { status = toStatus.ToString() });
+    }
+
+    public class TransitionRequest
+    {
+        public int ToStatus { get; set; }
     }
 
 
