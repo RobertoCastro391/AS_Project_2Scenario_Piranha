@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RazorWeb.Services.Editorial;
+using Piranha.Editorial.Repositories;
 
 namespace RazorWeb.Areas.Manager.Controllers
 {

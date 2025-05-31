@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Piranha.Editorial.ViewModels;
 
-namespace RazorWeb.Services.Editorial
+namespace Piranha.Editorial.Repositories
 {
     public interface IWorkflowRepository
     {

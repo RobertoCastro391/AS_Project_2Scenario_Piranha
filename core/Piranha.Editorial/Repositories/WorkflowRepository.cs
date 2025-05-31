@@ -3,7 +3,7 @@ using Piranha.Editorial.Abstractions.Models;
 using Piranha.Editorial.ViewModels;
 using Piranha.Data.EF.SQLite;
 
-namespace RazorWeb.Services.Editorial
+namespace Piranha.Editorial.Repositories
 {
     public class WorkflowRepository : IWorkflowRepository
     {
