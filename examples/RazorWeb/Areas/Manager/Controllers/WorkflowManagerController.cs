@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Piranha.Editorial.Repositories;
+using Piranha.Editorial.ViewModels;
+using Piranha.Data.EF.SQLite;
 
 namespace RazorWeb.Areas.Manager.Controllers
 {
@@ -7,17 +9,20 @@ namespace RazorWeb.Areas.Manager.Controllers
     public class WorkflowManagerController : Controller
     {
         private readonly IWorkflowRepository _workflowRepository;
+        private readonly ExtendedSQLiteDb _db;
 
-        public WorkflowManagerController(IWorkflowRepository workflowRepository)
+        public WorkflowManagerController(IWorkflowRepository workflowRepository, ExtendedSQLiteDb db)
         {
             _workflowRepository = workflowRepository;
+            _db = db;
         }
 
         [Route("manager/workflowmanager")]
         public async Task<IActionResult> Index()
         {
-            var workflows = await _workflowRepository.GetAllAsync();
-            return View(workflows);
+            var pages = await _workflowRepository.GetPageWorkflowStatusesAsync();
+
+            return View(pages);
         }
     }
 }

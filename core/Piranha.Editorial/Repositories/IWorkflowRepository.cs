@@ -7,5 +7,6 @@ namespace Piranha.Editorial.Repositories
     public interface IWorkflowRepository
     {
         Task<List<WorkflowListItemViewModel>> GetAllAsync();
+        Task<List<PageWorkflowStatusViewModel>> GetPageWorkflowStatusesAsync();
     }
 }
