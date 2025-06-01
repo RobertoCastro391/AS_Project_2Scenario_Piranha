@@ -2,6 +2,8 @@
 using Piranha.Editorial.Repositories;
 using Piranha.Editorial.ViewModels;
 using Piranha.Data.EF.SQLite;
+using System.Diagnostics.Metrics;
+
 
 namespace RazorWeb.Areas.Manager.Controllers
 {
@@ -10,18 +12,22 @@ namespace RazorWeb.Areas.Manager.Controllers
     {
         private readonly IWorkflowRepository _workflowRepository;
         private readonly ExtendedSQLiteDb _db;
+        private readonly Counter<long> _pageVisitCounter;
+        private long _visits = 0;
 
-        public WorkflowManagerController(IWorkflowRepository workflowRepository, ExtendedSQLiteDb db)
+        public WorkflowManagerController(IWorkflowRepository workflowRepository, ExtendedSQLiteDb db, Meter meter)
         {
             _workflowRepository = workflowRepository;
             _db = db;
+            _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Number of baskets created or updated.");
         }
 
         [Route("manager/workflowmanager")]
         public async Task<IActionResult> Index()
         {
-            var pages = await _workflowRepository.GetPageWorkflowStatusesAsync();
 
+            var pages = await _workflowRepository.GetPageWorkflowStatusesAsync();
+            _pageVisitCounter.Add(1, KeyValuePair.Create<string, object?>("area", "manager"));
             return View(pages);
         }
     }

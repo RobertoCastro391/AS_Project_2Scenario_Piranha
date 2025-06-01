@@ -4,16 +4,61 @@ using Piranha.AspNetCore.Identity.SQLite;
 using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
-using Piranha.Manager;
 using Piranha.Editorial.Services;
 
+using System.Diagnostics.Metrics;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<Piranha.Editorial.Repositories.IWorkflowRepository, Piranha.Editorial.Repositories.WorkflowRepository>();
 builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
 
+var meter = new Meter("RazorWeb");
+builder.Services.AddSingleton(meter);
 
+var counter = meter.CreateCounter<long>("basket_created_count", description: "Number of baskets created or updated.");
+counter.Add(1);
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RazorWeb"))
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("RazorWeb.Service")
+            .AddOtlpExporter(otlpOptions =>
+            {
+                otlpOptions.Endpoint = new Uri("http://localhost:4317");
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddMeter("RazorWeb")
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:4317");
+            });
+    });
+
+//builder.Logging.AddOpenTelemetry(options =>
+//{
+//    options.IncludeFormattedMessage = true;
+//    options.ParseStateValues = true;
+//    options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RazorWeb"));
+
+//    // Exporta logs via OTLP para o Collector
+//    options.AddOtlpExporter(exporterOptions =>
+//    {
+//        exporterOptions.Endpoint = new Uri("http://localhost:4317");
+//    });
+//});
 
 builder.AddPiranha(options =>
 {
@@ -60,6 +105,7 @@ builder.AddPiranha(options =>
 });
 
 var app = builder.Build();
+
 
 if (app.Environment.IsDevelopment())
 {
