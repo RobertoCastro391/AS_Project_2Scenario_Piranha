@@ -19,15 +19,13 @@ namespace Piranha.Editorial.Services
 
 
 
-    }
-
-    public class EditorialWorkflowService : IEditorialWorkflowService
+    }    public class EditorialWorkflowService : IEditorialWorkflowService
     {
-        private readonly ExtendedSQLiteDb _db;
+        private readonly SQLiteDb _db;
         private readonly IApi _api;
 
 
-        public EditorialWorkflowService(ExtendedSQLiteDb db, IApi api)
+        public EditorialWorkflowService(SQLiteDb db, IApi api)
         {
             _db = db;
             _api = api;

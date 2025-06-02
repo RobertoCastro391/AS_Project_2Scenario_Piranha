@@ -5,13 +5,12 @@ using Piranha.Data.EF.SQLite;
 
 namespace RazorWeb.Areas.Manager.Controllers
 {
-    [Area("Manager")]
-    public class WorkflowManagerController : Controller
+    [Area("Manager")]    public class WorkflowManagerController : Controller
     {
         private readonly IWorkflowRepository _workflowRepository;
-        private readonly ExtendedSQLiteDb _db;
+        private readonly SQLiteDb _db;
 
-        public WorkflowManagerController(IWorkflowRepository workflowRepository, ExtendedSQLiteDb db)
+        public WorkflowManagerController(IWorkflowRepository workflowRepository, SQLiteDb db)
         {
             _workflowRepository = workflowRepository;
             _db = db;

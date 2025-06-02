@@ -31,13 +31,8 @@ builder.AddPiranha(options =>
     options.UseFileStorage(naming: Piranha.Local.FileStorageNaming.UniqueFolderNames);
     options.UseImageSharp();
     options.UseTinyMCE();
-    options.UseMemoryCache();
-
-    var connectionString = builder.Configuration.GetConnectionString("piranha");
+    options.UseMemoryCache();    var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
-
-    builder.Services.AddDbContext<ExtendedSQLiteDb>(options =>
-    options.UseSqlite(connectionString));
 
     options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));
 
@@ -72,9 +67,8 @@ app.UsePiranha(options =>
     App.Init(options.Api);
 
     using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ExtendedSQLiteDb>();
-        RazorWeb.EditorialSeeder.Seed(db); 
+    {        var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
+        RazorWeb.EditorialSeeder.Seed(db);
     }
 
     // Build content types

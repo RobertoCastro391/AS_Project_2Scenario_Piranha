@@ -9,7 +9,7 @@ namespace RazorWeb;
 
 public static class EditorialSeeder
 {
-    public static void Seed(ExtendedSQLiteDb db)
+    public static void Seed(SQLiteDb db)
     {
         if (!db.Workflows.Any())
         {
