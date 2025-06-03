@@ -528,9 +528,9 @@ piranha.pageedit = new Vue({
                         timeout: 300
                     });
 
-                    if (transition.toStatus === 0 || transition.toStatus === 4) {
-                        setTimeout(() => window.location.reload(), 1);
-                    }
+                    
+                    setTimeout(() => window.location.reload(), 1);
+                    
 
                 })
                 .catch(function (error) {

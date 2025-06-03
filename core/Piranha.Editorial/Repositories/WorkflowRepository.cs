@@ -6,13 +6,12 @@ using System.Collections.Generic;
 using Piranha.Models;
 
 namespace Piranha.Editorial.Repositories
-{
-    public class WorkflowRepository : IWorkflowRepository
+{    public class WorkflowRepository : IWorkflowRepository
     {
-        private readonly ExtendedSQLiteDb _db;
+        private readonly SQLiteDb _db;
         private readonly IApi _api;
 
-        public WorkflowRepository(ExtendedSQLiteDb db, IApi api)
+        public WorkflowRepository(SQLiteDb db, IApi api)
         {
             _db = db;
             _api = api;
