@@ -17,7 +17,7 @@ namespace RazorWeb.Areas.Manager.Controllers
         {
             _workflowRepository = workflowRepository;
             _db = db;
-            _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Number of baskets created or updated.");
+            _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Workflow Manager count visits.");
         }
 
         [Route("manager/workflowmanager")]

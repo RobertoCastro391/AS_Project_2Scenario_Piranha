@@ -5,9 +5,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
+using System.Diagnostics.Metrics;
+
 
 namespace Piranha.Editorial.Services
 {
+
     public interface IEditorialWorkflowService
     {
         Task EnsurePageStatusAsync(Guid pageId);
@@ -24,11 +27,17 @@ namespace Piranha.Editorial.Services
         private readonly SQLiteDb _db;
         private readonly IApi _api;
 
+        private readonly Counter<long> _transitionCounter;
 
-        public EditorialWorkflowService(SQLiteDb db, IApi api)
+        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter)
         {
             _db = db;
             _api = api;
+            
+            _transitionCounter = meter.CreateCounter<long> (
+                "workflow_transition_total",
+                description: "Number of transitions in editorial workflow."
+            );
         }
 
         public async Task EnsurePageStatusAsync(Guid pageId)
@@ -165,6 +174,13 @@ namespace Piranha.Editorial.Services
             if (stage == null)
                 return false;
 
+            var currentStage = await _db.WorkflowStages
+                .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == pageStatus.Status);
+
+            var nextStage = stage; // já tens acima
+            _transitionCounter.Add(1, new KeyValuePair<string, object>("transition", $"{currentStage?.Name}→{nextStage.Name}"));
+
+
             // Atualiza o estado editorial
             pageStatus.Status = toStatus;
             pageStatus.CurrentStageId = stage.Id;
@@ -172,7 +188,7 @@ namespace Piranha.Editorial.Services
 
             await _db.SaveChangesAsync();
 
-            // 🔵 Se for publicar a página
+            // Se for publicar a página
             if (toStatus == EditorialStatus.Published)
             {
                 var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
@@ -183,7 +199,7 @@ namespace Piranha.Editorial.Services
                 }
             }
 
-            // 🔴 Se for voltar a rascunho, despublica
+            // Se for voltar a rascunho, despublica
             if (toStatus == EditorialStatus.Draft)
             {
                 var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
@@ -193,7 +209,6 @@ namespace Piranha.Editorial.Services
                     await _api.Pages.SaveAsync(page);
                 }
             }
-
             return true;
         }
 
