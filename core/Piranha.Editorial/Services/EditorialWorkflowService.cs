@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Memory;
 
 
@@ -29,13 +30,18 @@ namespace Piranha.Editorial.Services
 
         private readonly Counter<long> _transitionCounter;
         private readonly Histogram<double> _transitionDurationHistogram;
+        private readonly Counter<long> _rejectedContentCounter;
+        private readonly ObservableGauge<long> _pagesByStatusGauge;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly Histogram<double> _timeToPublish;
         private readonly IMemoryCache _cache;
 
-        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IMemoryCache cache)
+
+        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IServiceScopeFactory scopeFactory, IMemoryCache cache)
         {
             _db = db;
             _api = api;
+            _scopeFactory = scopeFactory;
             _cache = cache;
             
             _transitionCounter = meter.CreateCounter<long> (
@@ -54,7 +60,34 @@ namespace Piranha.Editorial.Services
                 unit: "s",
                 description: "Real Time from darft until publication."
             );
+
+            _rejectedContentCounter = meter.CreateCounter<long>(
+                "workflow_rejected_pages_total",
+                description: "Total de conteúdos rejeitados no workflow editorial."
+            );
+
+            //_pagesByStatusGauge = meter.CreateObservableGauge(
+            //    "workflow_pages_by_status_total",
+            //    ObservePagesByStatus,
+            //    description: "Number of pages currently in each editorial status.");
+
         }
+
+        //private IEnumerable<Measurement<long>> ObservePagesByStatus()
+        //{
+        //    using var scope = _scopeFactory.CreateScope();
+        //    var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
+
+        //    foreach (var group in db.PageEditorialStatuses
+        //                 .GroupBy(p => p.Status)
+        //                 .Select(g => new { Status = g.Key, Count = g.Count() }))
+        //    {
+        //        var label = Enum.GetName(typeof(EditorialStatus), group.Status) ?? "Unknown";
+        //        yield return new Measurement<long>(group.Count, new KeyValuePair<string, object>("status", label));
+        //    }
+
+        //}
+
 
         public async Task EnsurePageStatusAsync(Guid pageId)
         {
@@ -190,6 +223,7 @@ namespace Piranha.Editorial.Services
             if (stage == null)
                 return false;
 
+            #region Metrics
             var currentStage = await _db.WorkflowStages
                 .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == pageStatus.Status);
 
@@ -201,6 +235,23 @@ namespace Piranha.Editorial.Services
             var duration = (now - last).TotalSeconds;
             _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
 
+            // Só conta se a transição for rejeição para "Rascunho"
+            if (nextStage.Status == EditorialStatus.Draft &&
+                (currentStage.Status == EditorialStatus.EditorialReview || currentStage.Status == EditorialStatus.LegalReview))
+            {
+                var role = currentStage.RoleName switch
+                {
+                    "Editor" => "Editor",
+                    "Jurista" => "Jurista",
+                    _ => "Outro"
+                };
+
+                _rejectedContentCounter.Add(1,
+                    new("role", role),
+                    new("from", currentStage.Status.ToString()),
+                    new("to", nextStage.Status.ToString()));
+            }
+            #endregion
 
             if (currentStage?.Name == "Rascunho")
             {
