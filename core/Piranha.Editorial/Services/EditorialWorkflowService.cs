@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Caching.Memory;
 
 
 namespace Piranha.Editorial.Services
@@ -28,11 +29,14 @@ namespace Piranha.Editorial.Services
 
         private readonly Counter<long> _transitionCounter;
         private readonly Histogram<double> _transitionDurationHistogram;
+        private readonly Histogram<double> _timeToPublish;
+        private readonly IMemoryCache _cache;
 
-        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter)
+        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IMemoryCache cache)
         {
             _db = db;
             _api = api;
+            _cache = cache;
             
             _transitionCounter = meter.CreateCounter<long> (
                 "workflow_transition_total",
@@ -42,7 +46,13 @@ namespace Piranha.Editorial.Services
             _transitionDurationHistogram = meter.CreateHistogram<double>(
                 "workflow_transition_duration_seconds",
                 unit: "s",
-                description: "Tempo entre transições de estados no workflow editorial."
+                description: "Time between states transitions in the editorial workflow."
+            );
+
+            _timeToPublish = meter.CreateHistogram<double>(
+                "workflow_time_to_publish_seconds",
+                unit: "s",
+                description: "Real Time from darft until publication."
             );
         }
 
@@ -191,6 +201,12 @@ namespace Piranha.Editorial.Services
             var duration = (now - last).TotalSeconds;
             _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
 
+
+            if (currentStage?.Name == "Rascunho")
+            {
+                _cache.Set(pageId, DateTime.UtcNow);
+            }
+
             // Atualiza o estado editorial
             pageStatus.Status = toStatus;
             pageStatus.CurrentStageId = stage.Id;
@@ -207,6 +223,19 @@ namespace Piranha.Editorial.Services
                     page.Published = DateTime.UtcNow;
                     await _api.Pages.SaveAsync(page);
                 }
+
+                if (_cache.TryGetValue(pageId, out DateTime startTimek))
+                {
+                    var totalSeconds = (DateTime.UtcNow - startTimek).TotalSeconds;
+                    Console.WriteLine($"[PublishTiming] Page {pageId} → Tempo: {totalSeconds}s");
+
+                    _timeToPublish.Record(totalSeconds, new KeyValuePair<string, object?>("pageId", pageId.ToString()));
+                    _cache.Remove(pageId);
+                }
+                else
+                {
+                    Console.WriteLine($"[Warning] No draft timestamp found in cache for page {pageId} → skipping metric");
+                }
             }
 
             // Se for voltar a rascunho, despublica
@@ -221,6 +250,7 @@ namespace Piranha.Editorial.Services
             }
 
             return true;
+
         }
 
         public async Task DeleteStatusForPageAsync(Guid pageId)
@@ -235,7 +265,6 @@ namespace Piranha.Editorial.Services
                 await _db.SaveChangesAsync();
             }
         }
-
     }
 
 }
