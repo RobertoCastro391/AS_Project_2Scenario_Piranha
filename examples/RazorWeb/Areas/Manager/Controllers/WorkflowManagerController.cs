@@ -12,7 +12,6 @@ namespace RazorWeb.Areas.Manager.Controllers
         private readonly IWorkflowRepository _workflowRepository;
         private readonly SQLiteDb _db;
         private readonly Counter<long> _pageVisitCounter;
-        private long _visits = 0;
 
         public WorkflowManagerController(IWorkflowRepository workflowRepository, SQLiteDb db, Meter meter)
         {
