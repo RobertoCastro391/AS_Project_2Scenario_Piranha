@@ -19,15 +19,15 @@ namespace Piranha.Editorial.Services
         Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId);
         Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus);
         Task DeleteStatusForPageAsync(Guid pageId);
+    }    
 
-
-
-    }    public class EditorialWorkflowService : IEditorialWorkflowService
+    public class EditorialWorkflowService : IEditorialWorkflowService
     {
         private readonly SQLiteDb _db;
         private readonly IApi _api;
 
         private readonly Counter<long> _transitionCounter;
+        private readonly Histogram<double> _transitionDurationHistogram;
 
         public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter)
         {
@@ -37,6 +37,12 @@ namespace Piranha.Editorial.Services
             _transitionCounter = meter.CreateCounter<long> (
                 "workflow_transition_total",
                 description: "Number of transitions in editorial workflow."
+            );
+
+            _transitionDurationHistogram = meter.CreateHistogram<double>(
+                "workflow_transition_duration_seconds",
+                unit: "s",
+                description: "Tempo entre transições de estados no workflow editorial."
             );
         }
 
@@ -180,6 +186,10 @@ namespace Piranha.Editorial.Services
             var nextStage = stage; // já tens acima
             _transitionCounter.Add(1, new KeyValuePair<string, object>("transition", $"{currentStage?.Name}→{nextStage.Name}"));
 
+            var last = pageStatus.UpdatedAt;
+            var now = DateTime.UtcNow;
+            var duration = (now - last).TotalSeconds;
+            _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
 
             // Atualiza o estado editorial
             pageStatus.Status = toStatus;
@@ -209,10 +219,9 @@ namespace Piranha.Editorial.Services
                     await _api.Pages.SaveAsync(page);
                 }
             }
+
             return true;
         }
-
-
 
         public async Task DeleteStatusForPageAsync(Guid pageId)
         {
