@@ -31,14 +31,14 @@ namespace Piranha.Manager.Controllers;
 [ApiController]
 [AutoValidateAntiforgeryToken]
 public class PageApiController : Controller
-{
-    private readonly PageService _service;
+{    private readonly PageService _service;
     private readonly IApi _api;
     private readonly ManagerLocalizer _localizer;
     private readonly IHubContext<Hubs.PreviewHub> _hub;
     private readonly IAuthorizationService _auth;
     private readonly IEditorialWorkflowService _editorialWorkflowService;
     private readonly IWorkflowRepository _workflowRepository;
+    private readonly EditorialPermissionService _permissionService;
 
     /// <summary>
     /// Default constructor.
@@ -50,15 +50,16 @@ public class PageApiController : Controller
     IHubContext<Hubs.PreviewHub> hub,
     IAuthorizationService auth,
     IEditorialWorkflowService editorialWorkflowService,
-    IWorkflowRepository workflowRepository)
-    {
-        _service = service;
+    IWorkflowRepository workflowRepository,
+    EditorialPermissionService permissionService)
+    {        _service = service;
         _api = api;
         _localizer = localizer;
         _hub = hub;
         _auth = auth;
         _editorialWorkflowService = editorialWorkflowService;
         _workflowRepository = workflowRepository;
+        _permissionService = permissionService;
     }
 
 
@@ -427,29 +428,26 @@ public class PageApiController : Controller
             return BadRequest(new { error = "Apenas p�ginas em rascunho podem ser submetidas ou houve erro na transi��o." });
 
         return Ok(new { status = "EditorialReview" });
-    }
-
-    [HttpGet("available-transitions/{pageId}")]
+    }    [HttpGet("available-transitions/{pageId}")]
     public async Task<IActionResult> GetAvailableTransitions(Guid pageId)
     {
-        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(pageId);
+        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(pageId, User);
         return Ok(transitions);
     }
 
     [HttpPost("transition/{id:Guid}")]
     [Authorize(Policy = Permission.PagesPublish)]
     public async Task<IActionResult> PerformTransition(Guid id, [FromBody] TransitionRequest request)
-    {
-        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(id);
+    {        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(id, User);
         var toStatus = (EditorialStatus)request.ToStatus;
         var transition = transitions.FirstOrDefault(t => t.ToStatus == toStatus);
 
         if (transition == null)
-            return BadRequest(new { error = "Transi��o inv�lida para esta p�gina." });
+            return BadRequest(new { error = "Transição inválida para esta página ou usuário não tem permissão." });
 
-        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
+        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus, User);
         if (!success)
-            return BadRequest(new { error = "Falha ao aplicar a transi��o." });
+            return BadRequest(new { error = "Falha ao aplicar a transição ou usuário não tem permissão." });
 
         return Ok(new { status = toStatus.ToString() });
     }

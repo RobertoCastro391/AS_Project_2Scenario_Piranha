@@ -5,32 +5,97 @@ using System.Linq;
 using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
+using System.Security.Claims;
 
 namespace Piranha.Editorial.Services
-{
+{    /// <summary>
+    /// Interface for editorial workflow service.
+    /// </summary>
     public interface IEditorialWorkflowService
     {
+        /// <summary>
+        /// Ensures a page has editorial status.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
         Task EnsurePageStatusAsync(Guid pageId);
+        
+        /// <summary>
+        /// Gets the editorial status for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>The page editorial status</returns>
         Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId);
+        
+        /// <summary>
+        /// Submits a page to editorial review.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>True if successful</returns>
         Task<bool> SubmitToEditorialReviewAsync(Guid pageId);
+        
+        /// <summary>
+        /// Gets available transitions for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>List of available transitions</returns>
         Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId);
+        
+        /// <summary>
+        /// Gets available transitions for a page filtered by user permissions.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="user">The user</param>
+        /// <returns>List of available transitions</returns>
+        Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId, ClaimsPrincipal user);
+        
+        /// <summary>
+        /// Applies a transition to a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="toStatus">The target status</param>
+        /// <returns>True if successful</returns>
         Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus);
+        
+        /// <summary>
+        /// Applies a transition to a page with permission checking.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="toStatus">The target status</param>
+        /// <param name="user">The user</param>
+        /// <returns>True if successful</returns>
+        Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, ClaimsPrincipal user);
+        
+        /// <summary>
+        /// Deletes the editorial status for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
         Task DeleteStatusForPageAsync(Guid pageId);
-
-
-
-    }    public class EditorialWorkflowService : IEditorialWorkflowService
+    }    /// <summary>
+    /// Editorial workflow service implementation.
+    /// </summary>
+    public class EditorialWorkflowService : IEditorialWorkflowService
     {
         private readonly SQLiteDb _db;
         private readonly IApi _api;
+        private readonly EditorialPermissionService _permissionService;
 
-
-        public EditorialWorkflowService(SQLiteDb db, IApi api)
+        /// <summary>
+        /// Default constructor.
+        /// </summary>
+        /// <param name="db">The database context</param>
+        /// <param name="api">The Piranha API</param>
+        /// <param name="permissionService">The editorial permission service</param>
+        public EditorialWorkflowService(SQLiteDb db, IApi api, EditorialPermissionService permissionService)
         {
             _db = db;
             _api = api;
+            _permissionService = permissionService;
         }
 
+        /// <summary>
+        /// Ensures a page has editorial status.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
         public async Task EnsurePageStatusAsync(Guid pageId)
         {
             // Verifica se já existe estado editorial para esta página
@@ -68,6 +133,11 @@ namespace Piranha.Editorial.Services
             await _db.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Gets the editorial status for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>The page editorial status</returns>
         public async Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId)
         {
             var status = await _db.PageEditorialStatuses
@@ -76,15 +146,18 @@ namespace Piranha.Editorial.Services
                 .FirstOrDefaultAsync(s => s.PageId == pageId);
 
             if (status == null)
-                return null;
-
-            return new PageEditorialStatusDto
+                return null;            return new PageEditorialStatusDto
             {
                 Status = status.Status.ToString(),
                 CurrentStageId = status.CurrentStageId,
-                StageName = status.CurrentStage?.Name
-            };
-        }
+                StageName = status.CurrentStage?.Name ?? string.Empty
+            };        }
+
+        /// <summary>
+        /// Submits a page to editorial review.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>True if successful</returns>
         public async Task<bool> SubmitToEditorialReviewAsync(Guid pageId)
         {
             var pageStatus = await _db.PageEditorialStatuses
@@ -107,9 +180,13 @@ namespace Piranha.Editorial.Services
 
             await _db.SaveChangesAsync();
 
-            return true;
-        }
+            return true;        }
 
+        /// <summary>
+        /// Gets available transitions for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <returns>List of available transitions</returns>
         public async Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId)
         {
             var pageStatus = await _db.PageEditorialStatuses
@@ -137,9 +214,14 @@ namespace Piranha.Editorial.Services
             // Ordenar antes de devolver
             return transitions
                 .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
-                .ToList();
-        }
+                .ToList();        }
 
+        /// <summary>
+        /// Applies a transition to a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="toStatus">The target status</param>
+        /// <returns>True if successful</returns>
         public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus)
         {
             var pageStatus = await _db.PageEditorialStatuses
@@ -194,11 +276,91 @@ namespace Piranha.Editorial.Services
                 }
             }
 
-            return true;
+            return true;        }
+
+        /// <summary>
+        /// Gets available transitions for a page filtered by user permissions.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="user">The user</param>
+        /// <returns>List of available transitions</returns>
+        public async Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId, ClaimsPrincipal user)
+        {
+            var allTransitions = await GetAvailableTransitionsAsync(pageId);
+            
+            if (user == null)
+                return new List<WorkflowTransition>();
+
+            var allowedTransitions = new List<WorkflowTransition>();            foreach (var transition in allTransitions)
+            {
+                // Check if user has permission for this transition
+                if (!string.IsNullOrEmpty(transition.RequiredRole))
+                {
+                    if (await _permissionService.CanPerformTransitionAsync(user, transition.RequiredRole))
+                    {
+                        allowedTransitions.Add(transition);
+                    }
+                }
+                else
+                {
+                    // If no specific role required, check for general workflow access
+                    if (await _permissionService.HasWorkflowAccessAsync(user))
+                    {
+                        allowedTransitions.Add(transition);
+                    }
+                }
+            }
+
+            return allowedTransitions;
         }
 
+        /// <summary>
+        /// Applies a transition to a page with permission checking.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
+        /// <param name="toStatus">The target status</param>
+        /// <param name="user">The user</param>
+        /// <returns>True if successful</returns>
+        public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, ClaimsPrincipal user)
+        {
+            if (user == null)
+                return false;
 
+            var pageStatus = await _db.PageEditorialStatuses
+                .FirstOrDefaultAsync(s => s.PageId == pageId);
 
+            if (pageStatus == null)
+                return false;
+
+            // Get the specific transition being requested
+            var transition = await _db.WorkflowTransitions
+                .FirstOrDefaultAsync(t =>
+                    t.WorkflowId == pageStatus.WorkflowId &&
+                    t.FromStatus == pageStatus.Status &&
+                    t.ToStatus == toStatus);
+
+            if (transition == null)
+                return false;            // Check permissions for this transition
+            if (!string.IsNullOrEmpty(transition.RequiredRole))
+            {
+                if (!await _permissionService.CanPerformTransitionAsync(user, transition.RequiredRole))
+                    return false;
+            }
+            else
+            {
+                // If no specific role required, check for general workflow access
+                if (!await _permissionService.HasWorkflowAccessAsync(user))
+                    return false;
+            }
+
+            // If permission check passes, apply the transition
+            return await ApplyTransitionAsync(pageId, toStatus);
+        }
+
+        /// <summary>
+        /// Deletes the editorial status for a page.
+        /// </summary>
+        /// <param name="pageId">The page ID</param>
         public async Task DeleteStatusForPageAsync(Guid pageId)
         {
             var statuses = await _db.PageEditorialStatuses

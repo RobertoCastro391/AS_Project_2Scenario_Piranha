@@ -6,12 +6,16 @@ using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
 using Piranha.Manager;
 using Piranha.Editorial.Services;
+using Piranha.Editorial.Extensions;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<Piranha.Editorial.Repositories.IWorkflowRepository, Piranha.Editorial.Repositories.WorkflowRepository>();
 builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
+
+// Add editorial permissions
+builder.Services.AddEditorialPermissions();
 
 
 
@@ -34,17 +38,29 @@ builder.AddPiranha(options =>
     options.UseMemoryCache();    var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
 
-    options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));
-
-    /**
+    options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));    /**
      * Here you can configure the different permissions
      * that you want to use for securing content in the
      * application.
+     */
     options.UseSecurity(o =>
     {
-        o.UsePermission("WebUser", "Web User");
+        // Add editorial permissions
+        o.UsePermission(Piranha.Editorial.Permissions.Workflow, "Editorial Workflow");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowView, "View Editorial Workflow");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowAuthor, "Autor Role");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowEditor, "Editor Role");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowLegal, "Jurista Role");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowDirector, "Diretor Role");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowSubmitForReview, "Submit for Review");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowApproveEditorial, "Approve Editorial");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowRejectEditorial, "Reject Editorial");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowSubmitLegal, "Submit for Legal Review");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowApproveLegal, "Approve Legal");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowRejectLegal, "Reject Legal");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowPublish, "Publish Content");
+        o.UsePermission(Piranha.Editorial.Permissions.WorkflowUnpublish, "Unpublish Content");
     });
-     */
 
     /**
      * Here you can specify the login url for the front end
