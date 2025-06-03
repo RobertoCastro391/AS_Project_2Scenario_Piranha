@@ -11,6 +11,8 @@ namespace Piranha.Editorial.Abstractions.Models
         public Guid CurrentStageId { get; set; }
         public EditorialStatus Status { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public WorkflowStage CurrentStage { get; set; }
+
     }
 
 }

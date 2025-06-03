@@ -7,15 +7,14 @@ using System.Diagnostics.Metrics;
 
 namespace RazorWeb.Areas.Manager.Controllers
 {
-    [Area("Manager")]
-    public class WorkflowManagerController : Controller
+    [Area("Manager")]    public class WorkflowManagerController : Controller
     {
         private readonly IWorkflowRepository _workflowRepository;
-        private readonly ExtendedSQLiteDb _db;
+        private readonly SQLiteDb _db;
         private readonly Counter<long> _pageVisitCounter;
         private long _visits = 0;
 
-        public WorkflowManagerController(IWorkflowRepository workflowRepository, ExtendedSQLiteDb db, Meter meter)
+        public WorkflowManagerController(IWorkflowRepository workflowRepository, SQLiteDb db, Meter meter)
         {
             _workflowRepository = workflowRepository;
             _db = db;

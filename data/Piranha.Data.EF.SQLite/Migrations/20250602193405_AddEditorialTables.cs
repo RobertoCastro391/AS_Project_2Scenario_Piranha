@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
+namespace Piranha.Data.EF.SQLite.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialEditorialSchema : Migration
+    public partial class AddEditorialTables : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,20 +27,6 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ContentStateHistories", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "PostEditorialStatuses",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PostId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PostEditorialStatuses", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -83,7 +69,8 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     Order = table.Column<int>(type: "INTEGER", nullable: false),
                     RoleName = table.Column<string>(type: "TEXT", nullable: false),
-                    Instructions = table.Column<string>(type: "TEXT", nullable: true)
+                    Instructions = table.Column<string>(type: "TEXT", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -95,6 +82,33 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "PageEditorialStatuses",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    PageId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    WorkflowId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CurrentStageId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PageEditorialStatuses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PageEditorialStatuses_WorkflowStages_CurrentStageId",
+                        column: x => x.CurrentStageId,
+                        principalTable: "WorkflowStages",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PageEditorialStatuses_CurrentStageId",
+                table: "PageEditorialStatuses",
+                column: "CurrentStageId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_WorkflowStages_WorkflowId",
@@ -109,13 +123,13 @@ namespace Piranha.Data.EF.SQLite.Migrations.ExtendedSQLiteDbMigrations
                 name: "ContentStateHistories");
 
             migrationBuilder.DropTable(
-                name: "PostEditorialStatuses");
-
-            migrationBuilder.DropTable(
-                name: "WorkflowStages");
+                name: "PageEditorialStatuses");
 
             migrationBuilder.DropTable(
                 name: "WorkflowTransitions");
+
+            migrationBuilder.DropTable(
+                name: "WorkflowStages");
 
             migrationBuilder.DropTable(
                 name: "Workflows");
