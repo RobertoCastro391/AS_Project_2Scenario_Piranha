@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
+using System.Security.Claims;
 
 namespace Piranha.Editorial.Services
 {
@@ -16,7 +17,7 @@ namespace Piranha.Editorial.Services
         Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId);
         Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus);
         Task DeleteStatusForPageAsync(Guid pageId);
-
+        Task<List<WorkflowTransition>> GetTransitionsForRolesAsync(Guid pageId, List<string> userRoles);
 
 
     }    public class EditorialWorkflowService : IEditorialWorkflowService
@@ -109,6 +110,42 @@ namespace Piranha.Editorial.Services
 
             return true;
         }
+        public async Task<List<WorkflowTransition>> GetTransitionsForRolesAsync(Guid pageId, List<string> userRoles)
+        {
+            var pageStatus = await _db.PageEditorialStatuses
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.PageId == pageId);
+
+            if (pageStatus == null)
+                return new List<WorkflowTransition>();
+
+            var allTransitions = await _db.WorkflowTransitions
+                .Where(t => t.WorkflowId == pageStatus.WorkflowId && t.FromStatus == pageStatus.Status)
+                .ToListAsync();
+
+            var priorities = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Rejeitar"] = 0,
+                ["Voltar a Rascunho"] = 1,
+                ["Submeter para Revisão Editorial"] = 2,
+                ["Enviar para Revisão Jurídica"] = 3,
+                ["Aprovar para Publicação"] = 4,
+                ["Publicar Conteúdo"] = 5
+            };
+
+            var filtered = allTransitions
+                .Where(t =>
+                    userRoles.Contains(t.RequiredRole.ToLowerInvariant()) ||
+                    userRoles.Contains("sysadmin") ||
+                    userRoles.Contains("diretor"))
+                .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
+                .GroupBy(t => t.ToStatus)
+                .Select(g => g.First()) // só uma transição por destino
+                .ToList();
+
+            return filtered;
+        }
+
 
         public async Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId)
         {
@@ -136,8 +173,11 @@ namespace Piranha.Editorial.Services
 
             // Ordenar antes de devolver
             return transitions
-                .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
-                .ToList();
+                    .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
+                    .GroupBy(t => t.ToStatus)
+                    .Select(g => g.First())
+                    .ToList();
+
         }
 
         public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus)
@@ -196,8 +236,6 @@ namespace Piranha.Editorial.Services
 
             return true;
         }
-
-
 
         public async Task DeleteStatusForPageAsync(Guid pageId)
         {

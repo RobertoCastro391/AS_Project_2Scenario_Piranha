@@ -82,6 +82,22 @@ public static class EditorialSeeder
                     ToStatus = EditorialStatus.EditorialReview,
                     ActionName = "Submeter para Revisão Editorial",
                     RequiredRole = "Autor"
+                },new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.Draft,
+                    ToStatus = EditorialStatus.EditorialReview,
+                    ActionName = "Submeter para Revisão Editorial",
+                    RequiredRole = "Editor"
+                },new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.Draft,
+                    ToStatus = EditorialStatus.EditorialReview,
+                    ActionName = "Submeter para Revisão Editorial",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {
@@ -91,6 +107,14 @@ public static class EditorialSeeder
                     ToStatus = EditorialStatus.LegalReview,
                     ActionName = "Enviar para Revisão Jurídica",
                     RequiredRole = "Editor"
+                },new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.EditorialReview,
+                    ToStatus = EditorialStatus.LegalReview,
+                    ActionName = "Enviar para Revisão Jurídica",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {
@@ -100,6 +124,14 @@ public static class EditorialSeeder
                     ToStatus = EditorialStatus.Approved,
                     ActionName = "Aprovar para Publicação",
                     RequiredRole = "Jurista"
+                }, new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.LegalReview,
+                    ToStatus = EditorialStatus.Approved,
+                    ActionName = "Aprovar para Publicação",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {
@@ -118,6 +150,14 @@ public static class EditorialSeeder
                     ToStatus = EditorialStatus.Draft,
                     ActionName = "Rejeitar",
                     RequiredRole = "Editor"
+                },new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.EditorialReview,
+                    ToStatus = EditorialStatus.Draft,
+                    ActionName = "Rejeitar",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {
@@ -127,6 +167,15 @@ public static class EditorialSeeder
                     ToStatus = EditorialStatus.Draft,
                     ActionName = "Rejeitar",
                     RequiredRole = "Jurista"
+                },
+                new WorkflowTransition
+                {
+                    Id = Guid.NewGuid(),
+                    WorkflowId = workflowId,
+                    FromStatus = EditorialStatus.LegalReview,
+                    ToStatus = EditorialStatus.Draft,
+                    ActionName = "Rejeitar",
+                    RequiredRole = "Diretor"
                 },
                 new WorkflowTransition
                 {

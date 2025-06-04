@@ -17,6 +17,7 @@ using Piranha.Manager.Services;
 using Piranha.Editorial.Services;
 using Piranha.Editorial.Abstractions.Enums;
 using Piranha.Editorial.Repositories;
+using System.Security.Claims;
 
 
 
@@ -418,7 +419,7 @@ public class PageApiController : Controller
 
     [HttpPost]
     [Route("{id:Guid}/submit")]
-    [Authorize(Policy = Permission.PagesPublish)]
+    [Authorize]
     public async Task<IActionResult> Submit(Guid id)
     {
         var success = await _editorialWorkflowService.SubmitToEditorialReviewAsync(id);
@@ -430,29 +431,45 @@ public class PageApiController : Controller
     }
 
     [HttpGet("available-transitions/{pageId}")]
+    [Authorize]
     public async Task<IActionResult> GetAvailableTransitions(Guid pageId)
     {
-        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(pageId);
+        var userRoles = User.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value.ToLowerInvariant())
+            .ToList();
+
+        var transitions = await _editorialWorkflowService.GetTransitionsForRolesAsync(pageId, userRoles);
         return Ok(transitions);
     }
 
     [HttpPost("transition/{id:Guid}")]
-    [Authorize(Policy = Permission.PagesPublish)]
+    [Authorize]
     public async Task<IActionResult> PerformTransition(Guid id, [FromBody] TransitionRequest request)
     {
-        var transitions = await _editorialWorkflowService.GetAvailableTransitionsAsync(id);
+        var userRoles = User.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value.ToLowerInvariant())
+            .ToList();
+
+        var transitions = await _editorialWorkflowService.GetTransitionsForRolesAsync(id, userRoles);
         var toStatus = (EditorialStatus)request.ToStatus;
+
         var transition = transitions.FirstOrDefault(t => t.ToStatus == toStatus);
 
         if (transition == null)
-            return BadRequest(new { error = "Transi��o inv�lida para esta p�gina." });
+            return BadRequest(new { error = "Transição inválida para esta página." });
 
+        // Só chama ApplyTransitionAsync se já estiver validado
         var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
+
         if (!success)
-            return BadRequest(new { error = "Falha ao aplicar a transi��o." });
+            return BadRequest(new { error = "Falha ao aplicar a transição." });
 
         return Ok(new { status = toStatus.ToString() });
     }
+
+
 
     public class TransitionRequest
     {
