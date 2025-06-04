@@ -284,7 +284,9 @@ public class PageApiController : Controller
 
         var ret = await Save(model, false);
         await _hub?.Clients.All.SendAsync("Update", model.Id);
-        await _editorialWorkflowService.ApplyTransitionAsync(model.Id, EditorialStatus.Draft);
+        // Apply the transition to draft status
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        await _editorialWorkflowService.ApplyTransitionAsync(model.Id, EditorialStatus.Draft, userId);
 
 
         return ret;
@@ -391,7 +393,8 @@ public class PageApiController : Controller
         try
         {
             await _service.Save(model, draft);
-            await _editorialWorkflowService.EnsurePageStatusAsync(model.Id);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            await _editorialWorkflowService.EnsurePageStatusAsync(model.Id, userId);
 
 
         }
@@ -461,7 +464,8 @@ public class PageApiController : Controller
             return BadRequest(new { error = "Transição inválida para esta página." });
 
         // Só chama ApplyTransitionAsync se já estiver validado
-        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var success = await _editorialWorkflowService.ApplyTransitionAsync(id, toStatus, userId);
 
         if (!success)
             return BadRequest(new { error = "Falha ao aplicar a transição." });

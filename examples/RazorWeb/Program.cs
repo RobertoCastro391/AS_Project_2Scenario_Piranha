@@ -6,12 +6,16 @@ using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
 using Piranha.Manager;
 using Piranha.Editorial.Services;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serviços editoriais
 builder.Services.AddScoped<Piranha.Editorial.Repositories.IWorkflowRepository, Piranha.Editorial.Repositories.WorkflowRepository>();
 builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
+
+// Adiciona Identity e serviços necessários para UserManager funcionar
+
 
 // Configuração do Piranha CMS
 builder.AddPiranha(options =>

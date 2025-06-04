@@ -7,15 +7,17 @@ using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o context
 using Piranha.Editorial.Abstractions.Enums;
 using System.Security.Claims;
 
+
 namespace Piranha.Editorial.Services
 {
     public interface IEditorialWorkflowService
     {
-        Task EnsurePageStatusAsync(Guid pageId);
+        Task EnsurePageStatusAsync(Guid pageId, string userId);
         Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId);
         Task<bool> SubmitToEditorialReviewAsync(Guid pageId);
         Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId);
-        Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus);
+        Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, string userId);
+
         Task DeleteStatusForPageAsync(Guid pageId);
         Task<List<WorkflowTransition>> GetTransitionsForRolesAsync(Guid pageId, List<string> userRoles);
 
@@ -26,13 +28,14 @@ namespace Piranha.Editorial.Services
         private readonly IApi _api;
 
 
+
         public EditorialWorkflowService(SQLiteDb db, IApi api)
         {
             _db = db;
             _api = api;
         }
 
-        public async Task EnsurePageStatusAsync(Guid pageId)
+        public async Task EnsurePageStatusAsync(Guid pageId,string userId)
         {
             // Verifica se já existe estado editorial para esta página
             var exists = await _db.PageEditorialStatuses
@@ -66,6 +69,26 @@ namespace Piranha.Editorial.Services
             };
 
             _db.PageEditorialStatuses.Add(state);
+
+            var hasHistory = await _db.ContentStateHistories
+                    .AnyAsync(h => h.ContentId == pageId);
+
+            if (!hasHistory)
+            {
+                _db.ContentStateHistories.Add(new ContentStateHistory
+                {
+                    Id = Guid.NewGuid(),
+                    ContentId = pageId,
+                    FromStatus = EditorialStatus.Draft,
+                    ToStatus = EditorialStatus.Draft,
+                    Action = "Criação Inicial",
+                    Comment = null,
+                    UserId = userId ?? "anonymous",
+                    Timestamp = DateTime.UtcNow
+                });
+
+                await _db.SaveChangesAsync();
+            }
             await _db.SaveChangesAsync();
         }
 
@@ -180,12 +203,23 @@ namespace Piranha.Editorial.Services
 
         }
 
-        public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus)
+        public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, string userId)
         {
             var pageStatus = await _db.PageEditorialStatuses
                 .FirstOrDefaultAsync(s => s.PageId == pageId);
 
             if (pageStatus == null)
+                return false;
+
+            var fromStatus = pageStatus.Status;
+
+            var transition = await _db.WorkflowTransitions
+                    .FirstOrDefaultAsync(t =>
+            t.WorkflowId == pageStatus.WorkflowId &&
+            t.FromStatus == fromStatus &&
+            t.ToStatus == toStatus);
+
+            if (transition == null)
                 return false;
 
             // Verifica se a transição é válida
@@ -212,6 +246,8 @@ namespace Piranha.Editorial.Services
 
             await _db.SaveChangesAsync();
 
+            
+
             // 🔵 Se for publicar a página
             if (toStatus == EditorialStatus.Published)
             {
@@ -234,6 +270,10 @@ namespace Piranha.Editorial.Services
                 }
             }
 
+
+
+            await LogTransitionAsync(pageId, fromStatus, toStatus, transition.ActionName, userId);
+
             return true;
         }
 
@@ -248,6 +288,25 @@ namespace Piranha.Editorial.Services
                 _db.PageEditorialStatuses.RemoveRange(statuses);
                 await _db.SaveChangesAsync();
             }
+        }
+
+
+        private async Task LogTransitionAsync(Guid pageId, EditorialStatus fromStatus, EditorialStatus toStatus, string action, string userId, string? comment = null)
+        {
+            var log = new ContentStateHistory
+            {
+                Id = Guid.NewGuid(),
+                ContentId = pageId,
+                FromStatus = fromStatus,
+                ToStatus = toStatus,
+                Action = action,
+                Comment = comment,
+                UserId = userId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            _db.ContentStateHistories.Add(log);
+            await _db.SaveChangesAsync();
         }
 
     }

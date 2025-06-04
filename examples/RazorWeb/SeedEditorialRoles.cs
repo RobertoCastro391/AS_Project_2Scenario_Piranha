@@ -21,7 +21,7 @@ namespace RazorWeb
                     "LanguageAdd", "LanguageDelete", "LanguageEdit", "Language",
                     "PiranhaMediaAdd", "PiranhaMediaAddFolder", "PiranhaMediaDeleteFolder",
                     "PiranhaMediaEdit", "PiranhaMedia", "PiranhaMediaDelete",
-                    "PiranhaPostsAdd", "PiranhaPostsEdit", "PiranhaPosts", "PiranhaPostsSave","PiranhaPagesDelete"
+                    "PiranhaPostsAdd", "PiranhaPostsEdit", "PiranhaPosts", "PiranhaPostsSave","PiranhaPagesDelete","PiranhaSites"
                 },
 
                 ["Editor"] = new[]
