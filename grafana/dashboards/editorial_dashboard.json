@@ -566,7 +566,6 @@
         }
       },
       "pluginVersion": "12.0.1",
-      "repeatDirection": "h",
       "targets": [
         {
           "datasource": {
@@ -940,5 +939,5 @@
   "timezone": "browser",
   "title": "🏗️ Editorial Workflow Dashboard",
   "uid": "editorial-workflow",
-  "version": 12
+  "version": 1
 }
