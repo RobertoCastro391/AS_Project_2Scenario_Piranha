@@ -79,7 +79,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(workflow_total[15m]) * 60",
+          "expr": "workflow_total",
           "instant": false,
           "legendFormat": "Manager Visits/min",
           "range": true,
@@ -509,22 +509,45 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "benw3ku0b0wlcf"
+        "uid": "webstore-metrics"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
             "axisPlacement": "auto",
-            "fillOpacity": 70,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineWidth": 1
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "min": 0,
@@ -551,14 +574,12 @@
       },
       "id": 10,
       "options": {
-        "colWidth": 0.9,
         "legend": {
+          "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
-        "rowHeight": 0.9,
-        "showValue": "auto",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -582,7 +603,7 @@
         }
       ],
       "title": "📈 Transition Distribution (24h)",
-      "type": "status-history"
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -939,5 +960,5 @@
   "timezone": "browser",
   "title": "🏗️ Editorial Workflow Dashboard",
   "uid": "editorial-workflow",
-  "version": 1
+  "version": 2
 }
