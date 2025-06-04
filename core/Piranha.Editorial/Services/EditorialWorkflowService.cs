@@ -7,6 +7,7 @@ using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o context
 using Piranha.Editorial.Abstractions.Enums;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 
 
@@ -36,6 +37,7 @@ namespace Piranha.Editorial.Services
         private readonly Histogram<double> _timeToPublish;
         private readonly IMemoryCache _cache;
 
+        private static readonly ActivitySource _activitySource = new("RazorWeb.Service");
 
         public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IServiceScopeFactory scopeFactory, IMemoryCache cache)
         {
@@ -91,57 +93,99 @@ namespace Piranha.Editorial.Services
 
         public async Task EnsurePageStatusAsync(Guid pageId)
         {
-            // Verifica se já existe estado editorial para esta página
-            var exists = await _db.PageEditorialStatuses
+            using var activity = _activitySource.StartActivity("EnsurePageStatus", ActivityKind.Internal);
+            activity?.SetTag("page.id", pageId.ToString());
+
+            try
+            {
+                // Verifica se já existe estado editorial para esta página
+                var exists = await _db.PageEditorialStatuses
                 .AsNoTracking()
                 .AnyAsync(s => s.PageId == pageId);
 
-            if (exists)
-                return;
+                activity?.SetTag("alreadyExists", exists);
 
-            // Obter o workflow principal
-            var workflow = await _db.Workflows
-                .Include(w => w.Stages)
-                .FirstOrDefaultAsync();
+                if (exists)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    return;
+                }
 
-            if (workflow == null)
-                throw new InvalidOperationException("Nenhum workflow encontrado.");
+                // Obter o workflow principal
+                var workflow = await _db.Workflows
+                    .Include(w => w.Stages)
+                    .FirstOrDefaultAsync();
 
-            var initialStage = workflow.Stages.OrderBy(s => s.Order).FirstOrDefault();
+                if (workflow == null)
+                    throw new InvalidOperationException("Nenhum workflow encontrado.");
+
+                var initialStage = workflow.Stages.OrderBy(s => s.Order).FirstOrDefault();
 
 
-            if (initialStage == null)
-                throw new InvalidOperationException("O workflow não tem etapa inicial definida.");
+                if (initialStage == null)
+                    throw new InvalidOperationException("O workflow não tem etapa inicial definida.");
+                
+                activity?.SetTag("workflow.id", workflow.Id.ToString());
+                activity?.SetTag("stage.id", initialStage.Id.ToString());
 
-            // Criar novo estado editorial
-            var state = new PageEditorialStatus
+                // Criar novo estado editorial
+                var state = new PageEditorialStatus
+                {
+                    PageId = pageId,
+                    WorkflowId = workflow.Id,
+                    CurrentStageId = initialStage.Id,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _db.PageEditorialStatuses.Add(state);
+                await _db.SaveChangesAsync();
+
+                activity?.SetStatus(ActivityStatusCode.Ok);
+            }
+            catch (Exception ex)
             {
-                PageId = pageId,
-                WorkflowId = workflow.Id,
-                CurrentStageId = initialStage.Id,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _db.PageEditorialStatuses.Add(state);
-            await _db.SaveChangesAsync();
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.SetTag("exception", ex.ToString());
+                throw;
+            }
         }
 
         public async Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId)
         {
-            var status = await _db.PageEditorialStatuses
-                .AsNoTracking()
-                .Include(s => s.CurrentStage)
-                .FirstOrDefaultAsync(s => s.PageId == pageId);
+            using var activity = _activitySource.StartActivity("GetPageEditorialStatus", ActivityKind.Internal);
+            activity?.SetTag("page.id", pageId.ToString());
 
-            if (status == null)
-                return null;
-
-            return new PageEditorialStatusDto
+            try
             {
-                Status = status.Status.ToString(),
-                CurrentStageId = status.CurrentStageId,
-                StageName = status.CurrentStage?.Name
-            };
+                var status = await _db.PageEditorialStatuses
+                    .AsNoTracking()
+                    .Include(s => s.CurrentStage)
+                    .FirstOrDefaultAsync(s => s.PageId == pageId);
+
+                if (status == null)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    activity?.SetTag("status.found", false);
+                    return null;
+                }
+
+                activity?.SetTag("status.found", true);
+                activity?.SetTag("status.stage", status.CurrentStage?.Name ?? "unknown");
+                activity?.SetTag("status.value", status.Status.ToString());
+
+                return new PageEditorialStatusDto
+                {
+                    Status = status.Status.ToString(),
+                    CurrentStageId = status.CurrentStageId,
+                    StageName = status.CurrentStage?.Name
+                };
+            }
+            catch (Exception ex)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.SetTag("exception", ex.ToString());
+                throw;
+            }
         }
         public async Task<bool> SubmitToEditorialReviewAsync(Guid pageId)
         {
