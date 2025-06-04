@@ -4,20 +4,68 @@ using Piranha.AspNetCore.Identity.SQLite;
 using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
-using Piranha.Manager;
 using Piranha.Editorial.Services;
 using Microsoft.AspNetCore.Identity;
 
+
+using System.Diagnostics.Metrics;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Serviços editoriais
+// Serviï¿½os editoriais
 builder.Services.AddScoped<Piranha.Editorial.Repositories.IWorkflowRepository, Piranha.Editorial.Repositories.WorkflowRepository>();
 builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
 
-// Adiciona Identity e serviços necessários para UserManager funcionar
+
+// Adiciona Identity e serviï¿½os necessï¿½rios para UserManager funcionar
+
+var meter = new Meter("RazorWeb");
+builder.Services.AddSingleton(meter);
 
 
-// Configuração do Piranha CMS
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RazorWeb"))
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("RazorWeb.Service")
+            .AddOtlpExporter(otlpOptions =>
+            {
+                otlpOptions.Endpoint = new Uri("http://localhost:4317");
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddMeter("RazorWeb")
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:4317");
+            });
+    });
+
+//builder.Logging.AddOpenTelemetry(options =>
+//{
+//    options.IncludeFormattedMessage = true;
+//    options.ParseStateValues = true;
+//    options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("RazorWeb"));
+
+//    // Exporta logs via OTLP para o Collector
+//    options.AddOtlpExporter(exporterOptions =>
+//    {
+//        exporterOptions.Endpoint = new Uri("http://localhost:4317");
+//    });
+//});
+
+// Configuraï¿½ï¿½o do Piranha CMS
 builder.AddPiranha(options =>
 {
     options.AddRazorRuntimeCompilation = true;
@@ -38,12 +86,13 @@ builder.AddPiranha(options =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 
-// Inicialização do Piranha
+// Inicializaï¿½ï¿½o do Piranha
 app.UsePiranha(options =>
 {
     App.Init(options.Api);
@@ -60,13 +109,13 @@ app.UsePiranha(options =>
     options.UseIdentity();
 });
 
-// Seed de workflows e criação de roles personalizados (sem claims)
+// Seed de workflows e criaï¿½ï¿½o de roles personalizados (sem claims)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
     RazorWeb.EditorialSeeder.Seed(db); // Seed do workflow
 
-    // Seed só dos roles (sem claims)
+    // Seed sï¿½ dos roles (sem claims)
     await RazorWeb.SeedEditorialRoles.SeedAsync(scope.ServiceProvider);
 }
 

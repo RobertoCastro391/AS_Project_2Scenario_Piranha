@@ -265,7 +265,6 @@ public class PageApiController : Controller
     {
         var ret = await Save(model, true);
         await _hub?.Clients.All.SendAsync("Update", model.Id);
-
         return ret;
     }
 
@@ -395,6 +394,7 @@ public class PageApiController : Controller
             await _service.Save(model, draft);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             await _editorialWorkflowService.EnsurePageStatusAsync(model.Id, userId);
+
 
 
         }

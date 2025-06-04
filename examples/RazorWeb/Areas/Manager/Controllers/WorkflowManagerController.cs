@@ -8,6 +8,9 @@ using Piranha.Data.EF.SQLite;
 using Piranha.AspNetCore.Identity.Data;
 using Piranha.AspNetCore.Identity.SQLite;
 
+using System.Diagnostics.Metrics;
+
+
 namespace RazorWeb.Areas.Manager.Controllers
 {
     [Area("Manager")]
@@ -15,6 +18,7 @@ namespace RazorWeb.Areas.Manager.Controllers
     {
         private readonly IWorkflowRepository _workflowRepository;
         private readonly SQLiteDb _db;
+         private readonly Counter<long> _pageVisitCounter;
         private readonly IdentitySQLiteDb _identityDb;
         private readonly UserManager<User> _userManager;
 
@@ -22,19 +26,23 @@ namespace RazorWeb.Areas.Manager.Controllers
             IWorkflowRepository workflowRepository,
             SQLiteDb db,
             IdentitySQLiteDb identityDb,
-            UserManager<User> userManager)
+            UserManager<User> userManager,, Meter meter)
         {
             _workflowRepository = workflowRepository;
             _db = db;
             _identityDb = identityDb;
             _userManager = userManager;
+             _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Workflow Manager count visits.");
+
+      
         }
 
         [Route("manager/workflowmanager")]
         public async Task<IActionResult> Index()
         {
-            var pages = await _workflowRepository.GetPageWorkflowStatusesAsync();
 
+
+            var pages = await _workflowRepository.GetPageWorkflowStatusesAsync();
             // Carrega todos os históricos
             var allHistories = await _db.ContentStateHistories.ToListAsync();
 
@@ -66,6 +74,9 @@ namespace RazorWeb.Areas.Manager.Controllers
 
                 page.History = pageHistory;
             }
+
+
+            _pageVisitCounter.Add(1, KeyValuePair.Create<string, object?>("area", "manager"));
 
             return View(pages);
         }
