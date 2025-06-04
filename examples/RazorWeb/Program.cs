@@ -12,6 +12,7 @@ using System.Diagnostics.Metrics;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using static Piranha.Editorial.Services.IEditorialWorkflowService;
 
 
 var builder = WebApplication.CreateBuilder(args);

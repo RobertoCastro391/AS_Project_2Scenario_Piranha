@@ -26,7 +26,7 @@ namespace RazorWeb.Areas.Manager.Controllers
             IWorkflowRepository workflowRepository,
             SQLiteDb db,
             IdentitySQLiteDb identityDb,
-            UserManager<User> userManager,, Meter meter)
+            UserManager<User> userManager, Meter meter)
         {
             _workflowRepository = workflowRepository;
             _db = db;
