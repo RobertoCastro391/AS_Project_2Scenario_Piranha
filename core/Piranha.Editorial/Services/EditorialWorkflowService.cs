@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Piranha.Data.EF.SQLite; // ou o namespace correto onde definiste o contexto
 using Piranha.Editorial.Abstractions.Enums;
+using System.Security.Claims;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -17,13 +18,15 @@ namespace Piranha.Editorial.Services
 
     public interface IEditorialWorkflowService
     {
-        Task EnsurePageStatusAsync(Guid pageId);
+        Task EnsurePageStatusAsync(Guid pageId, string userId);
         Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId);
         Task<bool> SubmitToEditorialReviewAsync(Guid pageId);
         Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId);
-        Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus);
+        Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, string userId);
+
         Task DeleteStatusForPageAsync(Guid pageId);
-    }    
+        Task<List<WorkflowTransition>> GetTransitionsForRolesAsync(Guid pageId, List<string> userRoles);
+   
 
     public class EditorialWorkflowService : IEditorialWorkflowService
     {
@@ -41,7 +44,9 @@ namespace Piranha.Editorial.Services
 
         private static readonly ActivitySource _activitySource = new("RazorWeb.Service");
 
+
         public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IServiceScopeFactory scopeFactory, IMemoryCache cache, ILogger<EditorialWorkflowService> logger)
+
         {
             _db = db;
             _api = api;
@@ -78,23 +83,7 @@ namespace Piranha.Editorial.Services
 
         }
 
-        //private IEnumerable<Measurement<long>> ObservePagesByStatus()
-        //{
-        //    using var scope = _scopeFactory.CreateScope();
-        //    var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
-
-        //    foreach (var group in db.PageEditorialStatuses
-        //                 .GroupBy(p => p.Status)
-        //                 .Select(g => new { Status = g.Key, Count = g.Count() }))
-        //    {
-        //        var label = Enum.GetName(typeof(EditorialStatus), group.Status) ?? "Unknown";
-        //        yield return new Measurement<long>(group.Count, new KeyValuePair<string, object>("status", label));
-        //    }
-
-        //}
-
-
-        public async Task EnsurePageStatusAsync(Guid pageId)
+        public async Task EnsurePageStatusAsync(Guid pageId,string userId)
         {
             using var activity = _activitySource.StartActivity("EnsurePageStatus", ActivityKind.Internal);
             activity?.SetTag("page.id", pageId.ToString());
@@ -130,9 +119,7 @@ namespace Piranha.Editorial.Services
                 
                 activity?.SetTag("workflow.id", workflow.Id.ToString());
                 activity?.SetTag("stage.id", initialStage.Id.ToString());
-
-                // Criar novo estado editorial
-                var state = new PageEditorialStatus
+            var state = new PageEditorialStatus
                 {
                     PageId = pageId,
                     WorkflowId = workflow.Id,
@@ -141,7 +128,27 @@ namespace Piranha.Editorial.Services
                 };
 
                 _db.PageEditorialStatuses.Add(state);
+
+            var hasHistory = await _db.ContentStateHistories
+                    .AnyAsync(h => h.ContentId == pageId);
+
+            if (!hasHistory)
+            {
+                _db.ContentStateHistories.Add(new ContentStateHistory
+                {
+                    Id = Guid.NewGuid(),
+                    ContentId = pageId,
+                    FromStatus = EditorialStatus.Draft,
+                    ToStatus = EditorialStatus.Draft,
+                    Action = "Criação Inicial",
+                    Comment = null,
+                    UserId = userId ?? "anonymous",
+                    Timestamp = DateTime.UtcNow
+                });
+
                 await _db.SaveChangesAsync();
+            }
+            await _db.SaveChangesAsync();
 
                 activity?.SetStatus(ActivityStatusCode.Ok);
             }
@@ -151,6 +158,7 @@ namespace Piranha.Editorial.Services
                 activity?.SetTag("exception", ex.ToString());
                 throw;
             }
+
         }
 
         public async Task<PageEditorialStatusDto?> GetStatusForPageAsync(Guid pageId)
@@ -222,6 +230,42 @@ namespace Piranha.Editorial.Services
 
             return true;
         }
+        public async Task<List<WorkflowTransition>> GetTransitionsForRolesAsync(Guid pageId, List<string> userRoles)
+        {
+            var pageStatus = await _db.PageEditorialStatuses
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.PageId == pageId);
+
+            if (pageStatus == null)
+                return new List<WorkflowTransition>();
+
+            var allTransitions = await _db.WorkflowTransitions
+                .Where(t => t.WorkflowId == pageStatus.WorkflowId && t.FromStatus == pageStatus.Status)
+                .ToListAsync();
+
+            var priorities = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Rejeitar"] = 0,
+                ["Voltar a Rascunho"] = 1,
+                ["Submeter para Revisão Editorial"] = 2,
+                ["Enviar para Revisão Jurídica"] = 3,
+                ["Aprovar para Publicação"] = 4,
+                ["Publicar Conteúdo"] = 5
+            };
+
+            var filtered = allTransitions
+                .Where(t =>
+                    userRoles.Contains(t.RequiredRole.ToLowerInvariant()) ||
+                    userRoles.Contains("sysadmin") ||
+                    userRoles.Contains("diretor"))
+                .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
+                .GroupBy(t => t.ToStatus)
+                .Select(g => g.First()) // só uma transição por destino
+                .ToList();
+
+            return filtered;
+        }
+
 
         public async Task<List<WorkflowTransition>> GetAvailableTransitionsAsync(Guid pageId)
         {
@@ -249,17 +293,39 @@ namespace Piranha.Editorial.Services
 
             // Ordenar antes de devolver
             return transitions
-                .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
-                .ToList();
+                    .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
+                    .GroupBy(t => t.ToStatus)
+                    .Select(g => g.First())
+                    .ToList();
+
         }
-            
-        public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus)
+      
+        public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus, string userId)
         {
 
+
+            var fromStatus = pageStatus.Status;
+
+            var transition = await _db.WorkflowTransitions
+                    .FirstOrDefaultAsync(t =>
+            t.WorkflowId == pageStatus.WorkflowId &&
+            t.FromStatus == fromStatus &&
+            t.ToStatus == toStatus);
+
+            if (transition == null)
+                return false;
+
+            // Verifica se a transição é válida
+            var valid = await _db.WorkflowTransitions
+                .AnyAsync(t =>
+                    t.WorkflowId == pageStatus.WorkflowId &&
+                    t.FromStatus == pageStatus.Status &&
+                    t.ToStatus == toStatus);
 
             using var activity = _activitySource.StartActivity("ApplyWorkflowTransition", ActivityKind.Internal);
             activity?.SetTag("page.id", pageId.ToString());
             activity?.SetTag("target.status", toStatus.ToString());
+
 
             _logger.LogInformation("Applying transition to status '{TargetStatus}' for page {PageId}", toStatus, pageId);
 
@@ -284,7 +350,17 @@ namespace Piranha.Editorial.Services
                         t.ToStatus == toStatus);
 
 
+            
+
+            // 🔵 Se for publicar a página
+            if (toStatus == EditorialStatus.Published)
+            {
+                var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
+                if (page != null && page.Published == null)
+
+
                 if (!valid)
+
                 {
                     _logger.LogWarning("Invalid transition from {From} to {To} for page {PageId}", pageStatus.Status, toStatus, pageId);
                     activity?.SetStatus(ActivityStatusCode.Ok);
@@ -302,6 +378,7 @@ namespace Piranha.Editorial.Services
                     return false;
                 }
 
+
                 #region Metrics
                 var currentStage = await _db.WorkflowStages
                     .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == pageStatus.Status);
@@ -309,12 +386,16 @@ namespace Piranha.Editorial.Services
                 var nextStage = stage; // já tens acima
                 _transitionCounter.Add(1, new KeyValuePair<string, object>("transition", $"{currentStage?.Name}→{nextStage.Name}"));
 
+
                 var last = pageStatus.UpdatedAt;
                 var now = DateTime.UtcNow;
                 var duration = (now - last).TotalSeconds;
                 _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
                 _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", stage.Name));
                 activity?.SetTag("duration.seconds", duration);
+
+
+            
 
                 // Só conta se a transição for rejeição para "Rascunho"
                 if (nextStage.Status == EditorialStatus.Draft &&
@@ -386,7 +467,9 @@ namespace Piranha.Editorial.Services
 
                 _logger.LogInformation("Successfully transitioned page {PageId} to status {Status}", pageId, toStatus);
                 activity?.SetStatus(ActivityStatusCode.Ok);
-                return true;
+                await LogTransitionAsync(pageId, fromStatus, toStatus, transition.ActionName, userId);
+
+              return true;
             }
             catch (Exception ex)
             {
@@ -395,6 +478,7 @@ namespace Piranha.Editorial.Services
                 activity?.SetTag("exception", ex.ToString());
                 throw;
             }           
+
 
         }
 
@@ -410,6 +494,28 @@ namespace Piranha.Editorial.Services
                 await _db.SaveChangesAsync();
             }
         }
+
+
+
+        private async Task LogTransitionAsync(Guid pageId, EditorialStatus fromStatus, EditorialStatus toStatus, string action, string userId, string? comment = null)
+        {
+            var log = new ContentStateHistory
+            {
+                Id = Guid.NewGuid(),
+                ContentId = pageId,
+                FromStatus = fromStatus,
+                ToStatus = toStatus,
+                Action = action,
+                Comment = comment,
+                UserId = userId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            _db.ContentStateHistories.Add(log);
+            await _db.SaveChangesAsync();
+        }
+
+
     }
 
 }

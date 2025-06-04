@@ -6,7 +6,6 @@
 }
 
 <div class="m-4">
-
     <div class="top">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -15,6 +14,7 @@
             </ol>
         </nav>
     </div>
+
     <div class="container-fluid">
         <div class="row">
             <div class="col">
@@ -35,16 +35,51 @@
                                         @foreach (var item in group)
                                         {
                                             <li class="dd-item">
-                                                <div class="sitemap-item">
+                                                <div class="sitemap-item mb-4">
                                                     <div class="handle"><i class="fas fa-file-alt"></i></div>
-                                                    <div class="link d-flex flex-column justify-content-center">
-                                                        <span class="title">@item.Title</span>
-                                                        <small class="text-muted">
-                                                            Atualizado: @item.Created.ToString("HH:mm - dd/MM/yyyy")
-                                                        </small>
-                                                    </div>
-                                                    <div class="badge bg-info align-self-center text-bold" style="margin-right: 1vw">
-                                                        @item.WorkflowStage
+                                                    <div class="link d-flex flex-column justify-content-center w-100">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <span class="title">@item.Title</span><br />
+                                                                <small class="text-muted">
+                                                                    Atualizado: @item.Created.ToString("HH:mm - dd/MM/yyyy")
+                                                                </small>
+                                                            </div>
+                                                            <div class="badge bg-info align-self-center text-bold">
+                                                                @item.WorkflowStage
+                                                            </div>
+                                                        </div>
+
+                                                        @if (item.History?.Any() == true)
+                                                        {
+                                                            <table class="table table-sm table-bordered mt-3 mb-0">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Ação</th>
+                                                                        <th>De</th>
+                                                                        <th>Para</th>
+                                                                        <th>Por</th>
+                                                                        <th>Data</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var h in item.History)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>@h.Action</td>
+                                                                            <td>@h.FromStatus</td>
+                                                                            <td>@h.ToStatus</td>
+                                                                            <td>@h.UserId</td>
+                                                                            <td>@h.Timestamp.ToString("HH:mm dd/MM/yyyy")</td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        }
+                                                        else
+                                                        {
+                                                            <small class="text-muted mt-2">Sem histórico editorial.</small>
+                                                        }
                                                     </div>
                                                 </div>
                                             </li>

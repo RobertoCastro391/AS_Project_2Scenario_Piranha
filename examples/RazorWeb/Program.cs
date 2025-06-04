@@ -5,19 +5,27 @@ using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Manager.Editor;
 using Piranha.Editorial.Services;
+using Microsoft.AspNetCore.Identity;
+
 
 using System.Diagnostics.Metrics;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
+// Servi�os editoriais
 builder.Services.AddScoped<Piranha.Editorial.Repositories.IWorkflowRepository, Piranha.Editorial.Repositories.WorkflowRepository>();
 builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>();
 
+
+// Adiciona Identity e servi�os necess�rios para UserManager funcionar
+
 var meter = new Meter("RazorWeb");
 builder.Services.AddSingleton(meter);
+
 
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
@@ -57,14 +65,9 @@ builder.Services.AddOpenTelemetry()
 //    });
 //});
 
+// Configura��o do Piranha CMS
 builder.AddPiranha(options =>
 {
-    /**
-     * This will enable automatic reload of .cshtml
-     * without restarting the application. However since
-     * this adds a slight overhead it should not be
-     * enabled in production.
-     */
     options.AddRazorRuntimeCompilation = true;
 
     options.UseCms();
@@ -73,27 +76,12 @@ builder.AddPiranha(options =>
     options.UseFileStorage(naming: Piranha.Local.FileStorageNaming.UniqueFolderNames);
     options.UseImageSharp();
     options.UseTinyMCE();
-    options.UseMemoryCache();    var connectionString = builder.Configuration.GetConnectionString("piranha");
+    options.UseMemoryCache();
+
+    var connectionString = builder.Configuration.GetConnectionString("piranha");
+
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
-
     options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));
-
-    /**
-     * Here you can configure the different permissions
-     * that you want to use for securing content in the
-     * application.
-    options.UseSecurity(o =>
-    {
-        o.UsePermission("WebUser", "Web User");
-    });
-     */
-
-    /**
-     * Here you can specify the login url for the front end
-     * application. This does not affect the login url of
-     * the manager interface.
-    options.LoginUrl = "login";
-     */
 });
 
 var app = builder.Build();
@@ -104,29 +92,32 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// Inicializa��o do Piranha
 app.UsePiranha(options =>
 {
-    // Initialize Piranha
     App.Init(options.Api);
 
-    using (var scope = app.Services.CreateScope())
-    {        var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
-        RazorWeb.EditorialSeeder.Seed(db);
-    }
-
-    // Build content types
     new ContentTypeBuilder(options.Api)
         .AddAssembly(typeof(Program).Assembly)
         .Build()
         .DeleteOrphans();
 
-    // Configure Tiny MCE
     EditorConfig.FromFile("editorconfig.json");
 
     options.UseManager();
     options.UseTinyMCE();
     options.UseIdentity();
 });
+
+// Seed de workflows e cria��o de roles personalizados (sem claims)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<SQLiteDb>();
+    RazorWeb.EditorialSeeder.Seed(db); // Seed do workflow
+
+    // Seed s� dos roles (sem claims)
+    await RazorWeb.SeedEditorialRoles.SeedAsync(scope.ServiceProvider);
+}
 
 app.MapControllers();
 
