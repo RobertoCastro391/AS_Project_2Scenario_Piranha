@@ -36,5 +36,8 @@
     "vue": "2.6.10",
     "vue-template-compiler": "2.6.10",
     "vuejs-datepicker": "1.6.2"
+  },
+  "dependencies": {
+    "piranha.manager": "file:"
   }
 }

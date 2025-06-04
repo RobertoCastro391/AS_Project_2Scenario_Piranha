@@ -12,13 +12,12 @@ namespace RazorWeb.Areas.Manager.Controllers
         private readonly IWorkflowRepository _workflowRepository;
         private readonly SQLiteDb _db;
         private readonly Counter<long> _pageVisitCounter;
-        private long _visits = 0;
 
         public WorkflowManagerController(IWorkflowRepository workflowRepository, SQLiteDb db, Meter meter)
         {
             _workflowRepository = workflowRepository;
             _db = db;
-            _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Number of baskets created or updated.");
+            _pageVisitCounter = meter.CreateCounter<long>("workflow", description: "Workflow Manager count visits.");
         }
 
         [Route("manager/workflowmanager")]

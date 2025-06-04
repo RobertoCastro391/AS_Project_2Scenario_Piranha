@@ -19,9 +19,6 @@ builder.Services.AddScoped<IEditorialWorkflowService, EditorialWorkflowService>(
 var meter = new Meter("RazorWeb");
 builder.Services.AddSingleton(meter);
 
-var counter = meter.CreateCounter<long>("basket_created_count", description: "Number of baskets created or updated.");
-counter.Add(1);
-
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
     {
