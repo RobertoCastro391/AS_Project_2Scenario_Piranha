@@ -9,6 +9,7 @@ using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 
 namespace Piranha.Editorial.Services
@@ -36,15 +37,17 @@ namespace Piranha.Editorial.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly Histogram<double> _timeToPublish;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<EditorialWorkflowService> _logger;
 
         private static readonly ActivitySource _activitySource = new("RazorWeb.Service");
 
-        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IServiceScopeFactory scopeFactory, IMemoryCache cache)
+        public EditorialWorkflowService(SQLiteDb db, IApi api, Meter meter, IServiceScopeFactory scopeFactory, IMemoryCache cache, ILogger<EditorialWorkflowService> logger)
         {
             _db = db;
             _api = api;
             _scopeFactory = scopeFactory;
             _cache = cache;
+            _logger = logger;
             
             _transitionCounter = meter.CreateCounter<long> (
                 "workflow_transition_total",
@@ -155,6 +158,8 @@ namespace Piranha.Editorial.Services
             using var activity = _activitySource.StartActivity("GetPageEditorialStatus", ActivityKind.Internal);
             activity?.SetTag("page.id", pageId.ToString());
 
+            _logger.LogInformation("Getting editorial for a página {PageId}", pageId);
+
             try
             {
                 var status = await _db.PageEditorialStatuses
@@ -164,10 +169,13 @@ namespace Piranha.Editorial.Services
 
                 if (status == null)
                 {
+                    _logger.LogWarning("Nenhum status editorial encontrado para a página {PageId}", pageId);
                     activity?.SetStatus(ActivityStatusCode.Ok);
                     activity?.SetTag("status.found", false);
                     return null;
                 }
+
+                _logger.LogInformation("Status atual da página {PageId} é {Status} na etapa {Stage}", pageId, status.Status, status.CurrentStage?.Name);
 
                 activity?.SetTag("status.found", true);
                 activity?.SetTag("status.stage", status.CurrentStage?.Name ?? "unknown");
@@ -182,6 +190,7 @@ namespace Piranha.Editorial.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting editorial status for page {PageId}", pageId);
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 activity?.SetTag("exception", ex.ToString());
                 throw;
@@ -202,6 +211,8 @@ namespace Piranha.Editorial.Services
 
             if (stage == null)
                 return false;
+
+            _logger.LogWarning("Submiting from Draft to Editorial Review for page: {PageId}", pageId);
 
             pageStatus.Status = EditorialStatus.EditorialReview;
             pageStatus.CurrentStageId = stage.Id;
@@ -241,110 +252,149 @@ namespace Piranha.Editorial.Services
                 .OrderBy(t => priorities.TryGetValue(t.ActionName, out var p) ? p : 999)
                 .ToList();
         }
-
+            
         public async Task<bool> ApplyTransitionAsync(Guid pageId, EditorialStatus toStatus)
         {
-            var pageStatus = await _db.PageEditorialStatuses
-                .FirstOrDefaultAsync(s => s.PageId == pageId);
 
-            if (pageStatus == null)
-                return false;
 
-            // Verifica se a transição é válida
-            var valid = await _db.WorkflowTransitions
-                .AnyAsync(t =>
-                    t.WorkflowId == pageStatus.WorkflowId &&
-                    t.FromStatus == pageStatus.Status &&
-                    t.ToStatus == toStatus);
+            using var activity = _activitySource.StartActivity("ApplyWorkflowTransition", ActivityKind.Internal);
+            activity?.SetTag("page.id", pageId.ToString());
+            activity?.SetTag("target.status", toStatus.ToString());
 
-            if (!valid)
-                return false;
+            _logger.LogInformation("Applying transition to status '{TargetStatus}' for page {PageId}", toStatus, pageId);
 
-            // Obtem a nova etapa associada ao estado destino
-            var stage = await _db.WorkflowStages
-                .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == toStatus);
-
-            if (stage == null)
-                return false;
-
-            #region Metrics
-            var currentStage = await _db.WorkflowStages
-                .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == pageStatus.Status);
-
-            var nextStage = stage; // já tens acima
-            _transitionCounter.Add(1, new KeyValuePair<string, object>("transition", $"{currentStage?.Name}→{nextStage.Name}"));
-
-            var last = pageStatus.UpdatedAt;
-            var now = DateTime.UtcNow;
-            var duration = (now - last).TotalSeconds;
-            _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
-
-            // Só conta se a transição for rejeição para "Rascunho"
-            if (nextStage.Status == EditorialStatus.Draft &&
-                (currentStage.Status == EditorialStatus.EditorialReview || currentStage.Status == EditorialStatus.LegalReview))
+            try
             {
-                var role = currentStage.RoleName switch
+                var pageStatus = await _db.PageEditorialStatuses
+                    .FirstOrDefaultAsync(s => s.PageId == pageId);
+
+                if (pageStatus == null)
                 {
-                    "Editor" => "Editor",
-                    "Jurista" => "Jurista",
-                    _ => "Outro"
-                };
-
-                _rejectedContentCounter.Add(1,
-                    new("role", role),
-                    new("from", currentStage.Status.ToString()),
-                    new("to", nextStage.Status.ToString()));
-            }
-            #endregion
-
-            if (currentStage?.Name == "Rascunho")
-            {
-                _cache.Set(pageId, DateTime.UtcNow);
-            }
-
-            // Atualiza o estado editorial
-            pageStatus.Status = toStatus;
-            pageStatus.CurrentStageId = stage.Id;
-            pageStatus.UpdatedAt = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-
-            // Se for publicar a página
-            if (toStatus == EditorialStatus.Published)
-            {
-                var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
-                if (page != null && page.Published == null)
-                {
-                    page.Published = DateTime.UtcNow;
-                    await _api.Pages.SaveAsync(page);
+                    _logger.LogWarning("No editorial status found for page {PageId}", pageId);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    return false;
                 }
 
-                if (_cache.TryGetValue(pageId, out DateTime startTimek))
-                {
-                    var totalSeconds = (DateTime.UtcNow - startTimek).TotalSeconds;
-                    Console.WriteLine($"[PublishTiming] Page {pageId} → Tempo: {totalSeconds}s");
 
-                    _timeToPublish.Record(totalSeconds, new KeyValuePair<string, object?>("pageId", pageId.ToString()));
-                    _cache.Remove(pageId);
-                }
-                else
+                // Verifica se a transição é válida
+                var valid = await _db.WorkflowTransitions
+                    .AnyAsync(t =>
+                        t.WorkflowId == pageStatus.WorkflowId &&
+                        t.FromStatus == pageStatus.Status &&
+                        t.ToStatus == toStatus);
+
+
+                if (!valid)
                 {
-                    Console.WriteLine($"[Warning] No draft timestamp found in cache for page {pageId} → skipping metric");
+                    _logger.LogWarning("Invalid transition from {From} to {To} for page {PageId}", pageStatus.Status, toStatus, pageId);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    return false;
                 }
+
+                // Obtem a nova etapa associada ao estado destino
+                var stage = await _db.WorkflowStages
+                    .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == toStatus);
+                
+                if (stage == null)
+                {
+                    _logger.LogError("Target stage not found for status {Status} in workflow {WorkflowId}", toStatus, pageStatus.WorkflowId);
+                    activity?.SetStatus(ActivityStatusCode.Error, "Target stage not found");
+                    return false;
+                }
+
+                #region Metrics
+                var currentStage = await _db.WorkflowStages
+                    .FirstOrDefaultAsync(s => s.WorkflowId == pageStatus.WorkflowId && s.Status == pageStatus.Status);
+
+                var nextStage = stage; // já tens acima
+                _transitionCounter.Add(1, new KeyValuePair<string, object>("transition", $"{currentStage?.Name}→{nextStage.Name}"));
+
+                var last = pageStatus.UpdatedAt;
+                var now = DateTime.UtcNow;
+                var duration = (now - last).TotalSeconds;
+                _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", nextStage.Name));
+                _transitionDurationHistogram.Record(duration, new("from", currentStage?.Name), new("to", stage.Name));
+                activity?.SetTag("duration.seconds", duration);
+
+                // Só conta se a transição for rejeição para "Rascunho"
+                if (nextStage.Status == EditorialStatus.Draft &&
+                    (currentStage.Status == EditorialStatus.EditorialReview || currentStage.Status == EditorialStatus.LegalReview))
+                {
+                    var role = currentStage.RoleName switch
+                    {
+                        "Editor" => "Editor",
+                        "Jurista" => "Jurista",
+                        _ => "Outro"
+                    };
+
+                    _rejectedContentCounter.Add(1,
+                        new("role", role),
+                        new("from", currentStage.Status.ToString()),
+                        new("to", nextStage.Status.ToString()));
+
+                    _logger.LogInformation("Page {PageId} rejected by {Role}, returned to draft", pageId, role);
+                
+                }
+                #endregion
+
+                if (currentStage?.Name == "Rascunho")
+                {
+                    _cache.Set(pageId, DateTime.UtcNow);
+                }
+
+                // Atualiza o estado editorial
+                pageStatus.Status = toStatus;
+                pageStatus.CurrentStageId = stage.Id;
+                pageStatus.UpdatedAt = DateTime.UtcNow;
+
+                await _db.SaveChangesAsync();
+
+                // Publish
+                if (toStatus == EditorialStatus.Published)
+                {
+                    var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
+                    if (page != null && page.Published == null)
+                    {
+                        page.Published = DateTime.UtcNow;
+                        await _api.Pages.SaveAsync(page);
+                    }
+
+                    if (_cache.TryGetValue(pageId, out DateTime draftTime))
+                    {
+                        var totalSeconds = (DateTime.UtcNow - draftTime).TotalSeconds;
+                        _timeToPublish.Record(totalSeconds, new KeyValuePair<string, object?>("pageId", pageId.ToString()));
+                        _logger.LogInformation("Page {PageId} published after {Seconds} seconds", pageId, totalSeconds);
+                        _cache.Remove(pageId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No cached draft time for page {PageId}. Time-to-publish metric skipped.", pageId);
+                    }
+                }
+
+                // Se for voltar a rascunho, despublica
+                if (toStatus == EditorialStatus.Draft)
+                {
+                    var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
+                    if (page != null && page.Published != null)
+                    {
+                        page.Published = null;
+                        await _api.Pages.SaveAsync(page);
+                        _logger.LogInformation("Page {PageId} unpublished after returning to draft.", pageId);
+                    }
+                }
+
+                _logger.LogInformation("Successfully transitioned page {PageId} to status {Status}", pageId, toStatus);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+                return true;
             }
-
-            // Se for voltar a rascunho, despublica
-            if (toStatus == EditorialStatus.Draft)
+            catch (Exception ex)
             {
-                var page = await _api.Pages.GetByIdAsync<Piranha.Models.PageBase>(pageId);
-                if (page != null && page.Published != null)
-                {
-                    page.Published = null;
-                    await _api.Pages.SaveAsync(page);
-                }
-            }
-
-            return true;
+                _logger.LogError(ex, "Error during transition for page {PageId}", pageId);
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.SetTag("exception", ex.ToString());
+                throw;
+            }           
 
         }
 
