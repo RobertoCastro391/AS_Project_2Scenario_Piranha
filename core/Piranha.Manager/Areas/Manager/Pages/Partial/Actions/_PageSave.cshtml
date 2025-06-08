@@ -1,0 +1,64 @@
+@inject IAuthorizationService Auth
+@inject ManagerLocalizer Localizer
+
+@if ((await Auth.AuthorizeAsync(User, Permission.PagesSave)).Succeeded)
+{
+    <!-- Desktop: Save + Revert -->
+    <div class="btn-group d-none d-lg-inline-flex" role="group">
+        <button v-on:click.prevent="saveDraft" :class="{ 'btn-loading' : savingDraft }" type="button" class="btn btn-primary btn-labeled">
+            <i class="fas fa-save"></i>
+            @Localizer.General["Save"]
+        </button>
+        <div v-if="state === 'draft'" class="btn-group" role="group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+            <div class="dropdown-menu dropdown-menu-right">
+                <a v-on:click.prevent="revert" class="dropdown-item" href="#">
+                    <i class="fas fa-undo"></i> @Localizer.General["Revert"]
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile: Save + Revert -->
+    <div v-if="state === 'draft'" class="dropdown d-inline-block d-lg-none">
+        <button :class="{ 'btn-loading' : savingDraft }" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+            <i class="fas fa-save mr-1"></i>
+        </button>
+        <div class="dropdown-menu">
+            <a v-on:click.prevent="saveDraft" class="dropdown-item" href="#">@Localizer.General["Save"]</a>
+            <a v-on:click.prevent="revert" class="dropdown-item" href="#">@Localizer.General["Revert"]</a>
+        </div>
+    </div>
+    <button v-else v-on:click.prevent="saveDraft" class="btn btn-primary btn-icon d-inline-block d-lg-none" title="@Localizer.General["Save"]">
+        <i class="fas fa-save"></i>
+    </button>
+}
+
+@if (User.Identity.IsAuthenticated)
+{
+    <!-- Desktop: Botões por transição -->
+    <div v-if="availableTransitions.length > 0" class="btn-group d-none d-lg-inline-flex ml-2" role="group">
+        <button v-for="transition in availableTransitions"
+                :key="transition.id"
+                v-on:click.prevent="performTransition(transition)"
+                :class="['btn', 'btn-labeled', getButtonClass(transition.actionName)]">
+            <i :class="getButtonIcon(transition.actionName)"></i> {{ transition.actionName }}
+        </button>
+    </div>
+
+    <!-- Mobile: Dropdown com transições -->
+    <div v-if="availableTransitions.length > 0" class="dropdown d-inline-block d-lg-none ml-2">
+        <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
+            <i class="fas fa-random"></i>
+        </button>
+        <div class="dropdown-menu">
+            <a class="dropdown-item"
+               v-for="transition in availableTransitions"
+               :key="transition.id"
+               v-on:click.prevent="performTransition(transition)">
+                <i :class="getButtonIcon(transition.actionName)" class="mr-1"></i>
+                {{ transition.actionName }}
+            </a>
+        </div>
+    </div>
+}
