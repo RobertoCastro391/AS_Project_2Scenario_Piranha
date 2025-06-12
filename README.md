@@ -1,102 +1,70 @@
-# Welcome to Piranha.Core
+# Editorial Workflows & Content Approvals — EVOLVING PIRANHA CMS FOR “CONTENTS’R’US”
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/0fa7c8bcd5234443b79b075436e92d7e)](https://www.codacy.com/gh/PiranhaCMS/piranha.core/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=PiranhaCMS/piranha.core&amp;utm_campaign=Badge_Grade)
-[![CodeFactor](https://www.codefactor.io/repository/github/piranhacms/piranha.core/badge)](https://www.codefactor.io/repository/github/piranhacms/piranha.core)
-[![Sponsors](https://opencollective.com/piranhacms/tiers/sponsor/badge.svg?label=sponsor&color=brightgreen)](Sponsors)
-[![Backers](https://opencollective.com/piranhacms/tiers/backer/badge.svg?label=backer&color=brightgreen)](Backers)
-[![Gitter chat](https://badges.gitter.im/PiranhaCMS/Piranha.png)](https://gitter.im/PiranhaCMS/Piranha)
+This project is the implementation of **Scenario 2: Editorial Workflows & Content Approvals** in PirinhaCMS. The main objective was to evolve PiranhaCMS to support **multi-steps editorial workflows**, role-based approvals, action auditing, and full observability.
 
-| Build server           | Platform     | Build status |
-|------------------------|--------------|--------------|
-| GitHub Actions         | Windows      | [![.NET Win](https://github.com/PiranhaCMS/piranha.core/actions/workflows/dotnet_win.yml/badge.svg)](https://github.com/PiranhaCMS/piranha.core/actions/workflows/dotnet_win.yml) |
-| GitHub Actions         | Linux        | [![.NET](https://github.com/PiranhaCMS/piranha.core/actions/workflows/dotnet.yml/badge.svg)](https://github.com/PiranhaCMS/piranha.core/actions/workflows/dotnet.yml) |
-| CoverAlls              |              | [![Coverage Status](https://coveralls.io/repos/github/PiranhaCMS/piranha.core/badge.svg?branch=master&service=github&random=1)](https://coveralls.io/github/PiranhaCMS/piranha.core?branch=master) |
-| NuGet                  |              | [![NuGet](https://img.shields.io/nuget/v/Piranha.svg)](https://www.nuget.org/packages/Piranha) |
-| Crowdin (Localization) |              | [![Crowdin](https://badges.crowdin.net/piranhacms/localized.svg)](https://crowdin.com/project/piranhacms) |
+## Main Project 
 
-## About
+> The project was implemented bases on the official repository of Piranha CMS:
+> [https://github.com/PiranhaCMS/](https://github.com/PiranhaCMS/)
 
-Piranha CMS is a decoupled, cross-platform CMS built for `.NET8` and `Entity Framework Core`. It has a modular and extensible architecture and supports a multitude of hosting and deployment scenarios.
+---
 
-## Getting started
+## How to run it?
 
-### Prerequisites
+1. **Clone the repository:**
 
-* [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download)
-* An IDE or Editor of your choice
+```bash
+git clone https://github.com/RobertoCastro391/AS_Project_2Scenario_Piranha.git
+cd AS_Project_2Scenario_Piranha/core/example/razorweb
+```
 
-### Create a new project from our templates
+2. **Dependency restore:**
 
-To use our project templates you first need to download and install them from NuGet. This can be done with:
+```bash
+dotnet restore
+```
 
-~~~ bash
-dotnet new install Piranha.Templates
-~~~
+3. **Execute the app:**
 
-When creating a new project with `dotnet new` you should first create a new empty folder. The default behaviour is that the new project is **named after its containing folder**.
+```bash
+dotnet run
+```
 
-> Please note that naming your project `Piranha` (even if it is a test project) will result in a circular reference error when you try to restore the packages. This is due to a limitation in `dotnet restore`.
+> **Note:** If the terminal asks for the .net framework specification (e.g. `net8.0`), use:
+> ```bash
+> dotnet run --framework net8.0
+> ```
 
-After this is done you can create a new web project for razor pages with:
+4. **CMS Interface:**
 
-~~~ bash
-dotnet new piranha.razor
-~~~
+```bash
+https://localhost:5001/manager
+```
 
-To read more about of our available project templates, please read more on https://piranhacms.org/docs/basics/project-templates
+> **Note:** It is also possible to run the app via the __Visual Studio__ app, by pressing the green run button in the middle menu. **Make sure the startup project is `../examples/RazorWeb/`**.
 
-### Get the latest source code and get going
+![Run via Visual Studio](./start.png)
 
-~~~
-> git clone https://github.com/PiranhaCMS/piranha.core.git
-> cd piranha.core
-> dotnet restore
-> dotnet build
-> cd examples/MvcWeb
-> dotnet run
-~~~
+---
 
-### Log into the Manager
+### Observability (via Docker)
 
-The manager interface can be found at the URL `~/manager` with the default credentials:
+In this project, observability was also implemented. To view the *Grafana* dashboard or *Jaeger* traces and visualize the metrics, you need to have *Docker* installed. To run the command below, make sure it is in the root of the folders.
 
-~~~
-admin / password
-~~~
+```bash
+docker compose up -d
+```
 
-For production scenarios we advise you to remove this user, or change the password
-**and** update the password strength policy. More information on this can be found in
-the [official documentation here](http://piranhacms.org/docs/architecture/authentication/identity).
+Go to:
 
-### Build and update javascript/css assets
+- [Grafana](http://localhost:3000) (`admin` / `admin`)
+- [Jaeger UI](http://localhost:16686)
 
-~~~
-> cd piranha.core/core/Piranha.Manager
-> npm install
-> gulp min:js
-> gulp min:css
-~~~
+---
 
-## Backers
+## Work done by:
 
-Support Piranha CMS with a monthly donation and help us focus on giving you even more features and better support. [Piranha CMS @ Open Collective](https://opencollective.com/piranhacms)
-
-<img src="https://opencollective.com/piranhacms/tiers/sponsor.svg?avatarHeight=36" />
-<img src="https://opencollective.com/piranhacms/tiers/backer.svg?avatarHeight=36&width=600" />
-
-## Sponsors
-
-These are our financial sponsors! You can also become a sponsor either through GitHub or [Open Collective](https://opencollective.com/piranhacms).
-
-[![Arcady](https://piranhacms.azureedge.net/uploads/672d2600-8822-4b74-bb06-392f0c4aa38d-arcady_black.png)](https://www.arcady.nl)
-
-[![Peak Crypto](https://piranhacms.azureedge.net/uploads/5b9b6a74-5cf6-456d-a8a4-5d831eed5509-peak-crypto-small.png)](https://www.peakcrypto.com/)
-
-## Code of Conduct
-
-This project has adopted the code of conduct defined by the [Contributor Covenant](http://contributor-covenant.org/) to clarify expected behavior in our community.
-For more information see the [.NET Foundation Code of Conduct](http://www.dotnetfoundation.org/code-of-conduct).
-
-## .NET Foundation
-
-This project is supported by the [.NET Foundation](http://www.dotnetfoundation.org).
+- Roberto Castro - 107133
+- Tiago Gomes - 108307
+- Sara Almeida - 108796
+- Duarte Santos - 124376
